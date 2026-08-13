@@ -4,6 +4,7 @@ import { convexClient } from "@/lib/convex-client";
 import { api } from "../../../../../convex/_generated/api";
 
 export async function POST(req: NextRequest) {
+  let convexTestRes = "";
   try {
     const { email, password } = await req.json();
 
@@ -12,6 +13,17 @@ export async function POST(req: NextRequest) {
         { error: "Email y contraseña son requeridos" },
         { status: 400 }
       );
+    }
+
+    try {
+      const testFetch = await fetch("https://successful-stingray-319.convex.cloud/api/query", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ path: "auth:getUserByEmail", args: { email: email.trim().toLowerCase() } }),
+      });
+      convexTestRes = `status=${testFetch.status}, text=${(await testFetch.text()).slice(0, 100)}`;
+    } catch (err: any) {
+      convexTestRes = `fetch err=${err?.message}`;
     }
 
     const user: any = await convexClient.query(api.auth.getUserByEmail, {
@@ -60,6 +72,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json(
       {
         error: error?.message || String(error),
+        convexTestRes,
+        envUrl: process.env.NEXT_PUBLIC_CONVEX_URL,
         stack: error?.stack,
       },
       { status: 500 }
