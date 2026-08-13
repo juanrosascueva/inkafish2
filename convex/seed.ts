@@ -145,7 +145,7 @@ export const run = mutation({
     });
 
     // Users (password: admin123)
-    const password = await bcrypt.hash("admin123", 12);
+    const password = bcrypt.hashSync("admin123", 10);
     await ctx.db.insert("users", {
       email: "gerencia@sistema.com",
       name: "Juan Vila",
