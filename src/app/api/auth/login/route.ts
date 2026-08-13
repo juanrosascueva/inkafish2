@@ -14,7 +14,9 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const user: any = await convexClient.query(api.auth.getUserByEmail, { email });
+    const user: any = await convexClient.query(api.auth.getUserByEmail, {
+      email: email.trim().toLowerCase(),
+    });
 
     if (!user || !user.active) {
       return NextResponse.json(
@@ -56,13 +58,8 @@ export async function POST(req: NextRequest) {
   } catch (error: any) {
     console.error("Login error:", error);
     return NextResponse.json(
-      {
-        error: error?.message || String(error),
-        envConvexUrl: process.env.NEXT_PUBLIC_CONVEX_URL,
-        stack: error?.stack,
-      },
+      { error: "Error interno del servidor" },
       { status: 500 }
     );
   }
 }
-

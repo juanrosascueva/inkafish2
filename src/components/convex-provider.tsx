@@ -2,10 +2,9 @@
 
 import { ReactNode, useState } from "react";
 import { ConvexProvider, ConvexReactClient } from "convex/react";
+import { cleanConvexUrl } from "@/lib/convex-client";
 
-const rawUrl =
-  process.env.NEXT_PUBLIC_CONVEX_URL || "https://mock-dev-123.convex.cloud";
-const convexUrl = rawUrl.replace(/^["'\s]+|["'\s]+$/g, "");
+const convexUrl = cleanConvexUrl(process.env.NEXT_PUBLIC_CONVEX_URL);
 
 export function ConvexClientProvider({ children }: { children: ReactNode }) {
   const [convex] = useState(() => new ConvexReactClient(convexUrl));
