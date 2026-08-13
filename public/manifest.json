@@ -1,0 +1,16 @@
+{
+  "name": "Inka Fish - Sistema de Gestión",
+  "short_name": "Inka Fish",
+  "description": "Sistema de gestión de solicitudes, inventario y producción para Inka Fish",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#163C41",
+  "theme_color": "#347B85",
+  "icons": [
+    {
+      "src": "/logo-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ]
+}
