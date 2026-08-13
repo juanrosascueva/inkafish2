@@ -34,7 +34,7 @@ export default function LoginPage() {
         return;
       }
 
-      router.push("/dashboard");
+      window.location.href = "/dashboard";
     } catch {
       setError("Error de conexión. Intente nuevamente.");
     } finally {

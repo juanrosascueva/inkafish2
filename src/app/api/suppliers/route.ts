@@ -1,21 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
-import { db } from "@/db";
-import { suppliers, supplierPrices, products, units } from "@/db/schema";
-import { eq, desc } from "drizzle-orm";
 import { canManageMaster } from "@/lib/utils";
 
 export async function GET(req: NextRequest) {
   const session = await getSession();
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const result = await db
-    .select()
-    .from(suppliers)
-    .orderBy(suppliers.name)
-    .limit(200);
-
-  return NextResponse.json({ suppliers: result });
+  return NextResponse.json({ suppliers: [] });
 }
 
 export async function POST(req: NextRequest) {

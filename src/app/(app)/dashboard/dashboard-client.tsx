@@ -19,12 +19,12 @@ import { cn, getStatusColor, getStatusLabel, formatDateTime } from "@/lib/utils"
 import Link from "next/link";
 
 type SessionUser = {
-  id: number;
+  id: string | number;
   name: string;
   role: string;
   email: string;
-  siteId: number | null;
-  areaId: number | null;
+  siteId: string | number | null;
+  areaId: string | number | null;
 };
 
 type DashboardStats = {
@@ -41,12 +41,13 @@ type DashboardStats = {
 };
 
 type RecentRequest = {
-  id: number;
+  id: string | number;
   requestNumber: string;
   status: string;
   priority: string;
   createdAt: string;
 };
+
 
 const statCards = [
   { key: "pendingApprovals", label: "Pendientes de aprobación", icon: ClipboardList, color: "text-yellow-600 bg-yellow-50", href: "/approvals" },

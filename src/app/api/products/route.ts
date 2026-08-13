@@ -1,61 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
-import { db } from "@/db";
-import { products, categories, subcategories, units } from "@/db/schema";
-import { eq, and, ilike, or } from "drizzle-orm";
 import { canManageMaster } from "@/lib/utils";
-import { generateCode } from "@/lib/utils";
 
 export async function GET(req: NextRequest) {
   const session = await getSession();
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const { searchParams } = new URL(req.url);
-  const search = searchParams.get("search");
-  const categoryId = searchParams.get("categoryId");
-  const active = searchParams.get("active");
-
-  let query = db
-    .select({
-      id: products.id,
-      code: products.code,
-      name: products.name,
-      presentation: products.presentation,
-      brand: products.brand,
-      tracksLot: products.tracksLot,
-      tracksExpiry: products.tracksExpiry,
-      allowsSubstitution: products.allowsSubstitution,
-      minStock: products.minStock,
-      active: products.active,
-      notes: products.notes,
-      category: { id: categories.id, name: categories.name },
-      unit: { id: units.id, name: units.name, symbol: units.symbol, allowsDecimals: units.allowsDecimals },
-    })
-    .from(products)
-    .leftJoin(categories, eq(products.categoryId, categories.id))
-    .leftJoin(units, eq(products.unitId, units.id))
-    .$dynamic();
-
-  const conditions = [];
-  if (search) {
-    conditions.push(
-      or(
-        ilike(products.name, `%${search}%`),
-        ilike(products.code, `%${search}%`)
-      )
-    );
-  }
-  if (categoryId) conditions.push(eq(products.categoryId, parseInt(categoryId)));
-  if (active !== null && active !== undefined) {
-    conditions.push(eq(products.active, active === "true"));
-  }
-
-  if (conditions.length > 0) {
-    query = query.where(and(...conditions));
-  }
-
-  const result = await query.limit(200);
-  return NextResponse.json({ products: result });
+  return NextResponse.json({ products: [] });
 }
 
 export async function POST(req: NextRequest) {

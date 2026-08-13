@@ -1,9 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { db, ensureDbReady } from "@/db";
-import { users } from "@/db/schema";
-import { eq } from "drizzle-orm";
 import { createSession, verifyPassword } from "@/lib/auth";
-import { seedDatabase } from "@/lib/seed";
+import { convexClient } from "@/lib/convex-client";
+import { api } from "../../../../../convex/_generated/api";
 
 export async function POST(req: NextRequest) {
   try {
@@ -16,22 +14,8 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    await ensureDbReady();
+    const user: any = await convexClient.query(api.auth.getUserByEmail, { email });
 
-    // Try to seed on first login
-    try {
-      await seedDatabase();
-    } catch {
-      // Already seeded, ignore
-    }
-
-    const result = await db
-      .select()
-      .from(users)
-      .where(eq(users.email, email.toLowerCase()))
-      .limit(1);
-
-    const user = result[0];
     if (!user || !user.active) {
       return NextResponse.json(
         { error: "Credenciales inválidas" },
@@ -47,16 +31,16 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const token = await createSession(user.id);
+    const token = await createSession(user._id);
 
     const response = NextResponse.json({
       user: {
-        id: user.id,
+        id: user._id,
         email: user.email,
         name: user.name,
         role: user.role,
-        siteId: user.siteId,
-        areaId: user.areaId,
+        siteId: user.siteId ?? null,
+        areaId: user.areaId ?? null,
       },
     });
 
@@ -74,3 +58,4 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Error interno del servidor" }, { status: 500 });
   }
 }
+

@@ -1,63 +1,53 @@
 import { cookies } from "next/headers";
-import { db, ensureDbReady } from "@/db";
-import { sessions, users } from "@/db/schema";
-import { eq, gt } from "drizzle-orm";
+import { convexClient } from "./convex-client";
+import { api } from "../../convex/_generated/api";
 import crypto from "crypto";
 import bcrypt from "bcryptjs";
 
 export type SessionUser = {
-  id: number;
+  id: string;
   email: string;
   name: string;
   role: string;
-  siteId: number | null;
-  areaId: number | null;
+  siteId: string | null;
+  areaId: string | null;
 };
 
 export async function getSession(): Promise<SessionUser | null> {
-  await ensureDbReady();
   const cookieStore = await cookies();
   const token = cookieStore.get("session_token")?.value;
   if (!token) return null;
 
-  const result = await db
-    .select({
-      id: users.id,
-      email: users.email,
-      name: users.name,
-      role: users.role,
-      siteId: users.siteId,
-      areaId: users.areaId,
-      active: users.active,
-    })
-    .from(sessions)
-    .innerJoin(users, eq(sessions.userId, users.id))
-    .where(eq(sessions.token, token))
-    .limit(1);
+  try {
+    const authResult: any = await convexClient.query(api.auth.getSession, { token });
+    if (!authResult || !authResult.user) return null;
 
-  const session = result[0];
-  if (!session || !session.active) return null;
-
-  return {
-    id: session.id,
-    email: session.email,
-    name: session.name,
-    role: session.role,
-    siteId: session.siteId,
-    areaId: session.areaId,
-  };
+    const { user } = authResult;
+    return {
+      id: user._id,
+      email: user.email,
+      name: user.name,
+      role: user.role,
+      siteId: user.siteId ?? null,
+      areaId: user.areaId ?? null,
+    };
+  } catch (error) {
+    console.error("Error al obtener sesión de Convex:", error);
+    return null;
+  }
 }
 
-export async function createSession(userId: number): Promise<string> {
+export async function createSession(userId: string): Promise<string> {
   const token = crypto.randomBytes(32).toString("hex");
-  const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
+  const expiresAt = Date.now() + 7 * 24 * 60 * 60 * 1000; // 7 días
 
-  await db.insert(sessions).values({ userId, token, expiresAt });
+  await convexClient.mutation(api.auth.createSession, {
+    userId: userId as any,
+    token,
+    expiresAt,
+  });
+
   return token;
-}
-
-export async function deleteSession(token: string): Promise<void> {
-  await db.delete(sessions).where(eq(sessions.token, token));
 }
 
 export async function hashPassword(password: string): Promise<string> {
@@ -70,3 +60,4 @@ export async function verifyPassword(
 ): Promise<boolean> {
   return bcrypt.compare(password, hash);
 }
+

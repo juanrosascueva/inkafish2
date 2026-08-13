@@ -32,6 +32,37 @@ export const getBalances = query({
   },
 });
 
+// FEFO: Consulta de lotes ordenados por fecha de vencimiento (First Expired, First Out)
+export const getLotsByFEFO = query({
+  args: {
+    productId: v.id("products"),
+    siteId: v.optional(v.id("sites")),
+    warehouseId: v.optional(v.id("warehouses")),
+  },
+  handler: async (ctx: any, args: any) => {
+    const allLots = await ctx.db
+      .query("lots")
+      .withIndex("by_product", (q: any) => q.eq("productId", args.productId))
+      .collect();
+
+    // Filtrar lotes activos con saldo disponible
+    const activeLots = allLots.filter((lot: any) => {
+      if (!lot.active || lot.remainingQuantity <= 0) return false;
+      if (args.siteId && lot.siteId && lot.siteId !== args.siteId) return false;
+      if (args.warehouseId && lot.warehouseId && lot.warehouseId !== args.warehouseId) return false;
+      return true;
+    });
+
+    // Ordenar por FEFO: Menor expiresAt primero. Si no tiene expira, va al final.
+    return activeLots.sort((a: any, b: any) => {
+      if (a.expiresAt && b.expiresAt) return a.expiresAt - b.expiresAt;
+      if (a.expiresAt) return -1;
+      if (b.expiresAt) return 1;
+      return a.createdAt - b.createdAt;
+    });
+  },
+});
+
 export const recordMovement = mutation({
   args: {
     movementType: v.string(),
@@ -91,3 +122,4 @@ export const recordMovement = mutation({
     return movementId;
   },
 });
+
