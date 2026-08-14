@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
 import { requireAuth } from "@/lib/auth-guard";
+import { validatePayload, productionOrderSchema } from "@/lib/validations";
 import { convexClient } from "@/lib/convex-client";
 import { api } from "../../../../convex/_generated/api";
 
@@ -38,8 +39,15 @@ export async function POST(req: NextRequest) {
 
   try {
     const body = await req.json();
+
+    // Validar Payload con Zod
+    const validation = validatePayload(productionOrderSchema, body);
+    if (!validation.success) return validation.response;
+
+    const validatedData = validation.data;
+
     const id = await convexClient.mutation(api.production.create, {
-      ...body,
+      ...validatedData,
       createdBy: session.id as any,
     });
     return NextResponse.json({ ok: true, id }, { status: 201 });
