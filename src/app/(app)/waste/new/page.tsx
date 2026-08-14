@@ -11,6 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { SearchableSelect } from "@/components/ui/searchable-select";
 import { CustomSelect } from "@/components/ui/custom-select";
 import { CustomDatePicker } from "@/components/ui/custom-date-picker";
+import { UserIdentityBadge, UserProfile } from "@/components/ui/user-identity-badge";
 
 const stageOptions = [
   { value: "STORAGE", label: "Almacenamiento" },
@@ -125,6 +126,13 @@ export default function NewWastePage() {
           <p className="text-sm text-gray-500">Desperdicio o pérdida de producto</p>
         </div>
       </div>
+
+      <UserIdentityBadge
+        onUserLoaded={(u) => {
+          if (u.siteId && !siteId) setSiteId(String(u.siteId));
+          if (u.areaId && !areaId) setAreaId(String(u.areaId));
+        }}
+      />
 
       {success && (
         <div className="p-4 bg-green-50 border border-green-200 rounded-xl text-green-800 text-sm font-medium">

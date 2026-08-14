@@ -11,6 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { SearchableSelect } from "@/components/ui/searchable-select";
 import { CustomSelect } from "@/components/ui/custom-select";
 import { CustomDatePicker } from "@/components/ui/custom-date-picker";
+import { UserIdentityBadge, UserProfile } from "@/components/ui/user-identity-badge";
 
 type Site = { id: number; name: string };
 type Area = { id: number; name: string; siteId: number };
@@ -134,6 +135,13 @@ export default function NewProductionPage() {
           <p className="text-sm text-gray-500">Transformación de materias primas</p>
         </div>
       </div>
+
+      <UserIdentityBadge
+        onUserLoaded={(u) => {
+          if (u.siteId && !siteId) setSiteId(String(u.siteId));
+          if (u.areaId && !areaId) setAreaId(String(u.areaId));
+        }}
+      />
 
       <form onSubmit={handleSubmit} className="space-y-6">
         <Card>

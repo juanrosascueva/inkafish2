@@ -11,6 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { SearchableSelect } from "@/components/ui/searchable-select";
 import { CustomSelect } from "@/components/ui/custom-select";
 import { CustomDatePicker } from "@/components/ui/custom-date-picker";
+import { UserIdentityBadge, UserProfile } from "@/components/ui/user-identity-badge";
 
 type Site = { id: number; name: string };
 type Warehouse = { id: number; name: string; siteId: number };
@@ -125,6 +126,12 @@ export default function NewTransferPage() {
           <p className="text-sm text-gray-500">Entre sedes (San Miguel ↔ Lince)</p>
         </div>
       </div>
+
+      <UserIdentityBadge
+        onUserLoaded={(u) => {
+          if (u.siteId && !originSiteId) setOriginSiteId(String(u.siteId));
+        }}
+      />
 
       <form onSubmit={handleSubmit} className="space-y-6">
         <Card>

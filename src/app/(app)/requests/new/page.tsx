@@ -10,6 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { SearchableSelect } from "@/components/ui/searchable-select";
 import { CustomSelect } from "@/components/ui/custom-select";
 import { CustomDatePicker } from "@/components/ui/custom-date-picker";
+import { UserIdentityBadge, UserProfile } from "@/components/ui/user-identity-badge";
 
 type MasterData = {
   sites: { id: number; name: string }[];
@@ -180,12 +181,19 @@ export default function NewRequestPage() {
     sublabel: p.unit?.symbol || "UND",
   }));
 
+  const handleUserLoaded = (u: UserProfile) => {
+    if (u.siteId && !siteId) setSiteId(String(u.siteId));
+    if (u.areaId && !areaId) setAreaId(String(u.areaId));
+  };
+
   return (
     <div className="p-4 lg:p-6 max-w-3xl mx-auto space-y-6">
       <div>
         <h2 className="text-xl font-bold text-gray-900">Nueva Solicitud</h2>
         <p className="text-sm text-gray-500">Complete los datos para crear la solicitud</p>
       </div>
+
+      <UserIdentityBadge onUserLoaded={handleUserLoaded} />
 
       <form onSubmit={(e) => handleSubmit(e, "PENDING_APPROVAL")} className="space-y-6">
         {/* Header */}

@@ -11,6 +11,7 @@ import { SkeletonList } from "@/components/ui/skeleton-card";
 import { SearchableSelect } from "@/components/ui/searchable-select";
 import { CustomSelect } from "@/components/ui/custom-select";
 import { CustomDatePicker } from "@/components/ui/custom-date-picker";
+import { UserIdentityBadge, UserProfile } from "@/components/ui/user-identity-badge";
 import { cn, getStatusColor, getStatusLabel, formatDate, formatCurrency } from "@/lib/utils";
 
 type Purchase = {
@@ -213,6 +214,11 @@ export default function PurchasesPage() {
           <DialogHeader>
             <DialogTitle>Nueva Orden de Compra</DialogTitle>
           </DialogHeader>
+          <UserIdentityBadge
+            onUserLoaded={(u) => {
+              if (u.siteId && !siteId) setSiteId(String(u.siteId));
+            }}
+          />
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-1.5">
