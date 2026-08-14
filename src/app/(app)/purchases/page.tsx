@@ -10,6 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { SkeletonList } from "@/components/ui/skeleton-card";
 import { SearchableSelect } from "@/components/ui/searchable-select";
 import { CustomSelect } from "@/components/ui/custom-select";
+import { CustomDatePicker } from "@/components/ui/custom-date-picker";
 import { cn, getStatusColor, getStatusLabel, formatDate, formatCurrency } from "@/lib/utils";
 
 type Purchase = {
@@ -249,7 +250,7 @@ export default function PurchasesPage() {
 
               <div className="space-y-1.5">
                 <Label>Fecha Esperada de Entrega</Label>
-                <Input type="date" value={expectedDate} onChange={(e) => setExpectedDate(e.target.value)} />
+                <CustomDatePicker value={expectedDate} onChange={setExpectedDate} />
               </div>
             </div>
 

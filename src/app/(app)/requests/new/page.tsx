@@ -9,6 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { SearchableSelect } from "@/components/ui/searchable-select";
 import { CustomSelect } from "@/components/ui/custom-select";
+import { CustomDatePicker } from "@/components/ui/custom-date-picker";
 
 type MasterData = {
   sites: { id: number; name: string }[];
@@ -215,10 +216,9 @@ export default function NewRequestPage() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-1.5">
                 <Label>Fecha requerida *</Label>
-                <Input
-                  type="date"
+                <CustomDatePicker
                   value={requiredDate}
-                  onChange={(e) => setRequiredDate(e.target.value)}
+                  onChange={setRequiredDate}
                   min={new Date().toISOString().split("T")[0]}
                   required
                 />

@@ -66,3 +66,26 @@ body {
   background: #347b85;
 }
 
+/* Custom Calendar and Date Inputs for InkaFish Theme */
+input[type="date"],
+input[type="datetime-local"] {
+  accent-color: #1b6970;
+  color-scheme: light;
+  font-family: inherit;
+}
+
+input[type="date"]::-webkit-calendar-picker-indicator,
+input[type="datetime-local"]::-webkit-calendar-picker-indicator {
+  cursor: pointer;
+  border-radius: 6px;
+  padding: 4px;
+  filter: invert(33%) sepia(29%) saturate(1487%) hue-rotate(143deg) brightness(92%) contrast(90%);
+  transition: all 0.2s ease;
+}
+
+input[type="date"]::-webkit-calendar-picker-indicator:hover,
+input[type="datetime-local"]::-webkit-calendar-picker-indicator:hover {
+  background-color: #f0f7f8;
+  transform: scale(1.1);
+}
+

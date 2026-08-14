@@ -10,6 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { SearchableSelect } from "@/components/ui/searchable-select";
 import { CustomSelect } from "@/components/ui/custom-select";
+import { CustomDatePicker } from "@/components/ui/custom-date-picker";
 
 type Site = { id: number; name: string };
 type Warehouse = { id: number; name: string; siteId: number };
@@ -173,7 +174,7 @@ export default function NewTransferPage() {
             </div>
             <div className="space-y-1.5">
               <Label>Fecha planificada</Label>
-              <Input type="date" value={plannedDate} onChange={(e) => setPlannedDate(e.target.value)} />
+              <CustomDatePicker value={plannedDate} onChange={setPlannedDate} />
             </div>
             <div className="space-y-1.5">
               <Label>Notas</Label>

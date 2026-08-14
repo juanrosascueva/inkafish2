@@ -9,6 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { SkeletonCard } from "@/components/ui/skeleton-card";
 import { SearchableSelect } from "@/components/ui/searchable-select";
 import { CustomSelect } from "@/components/ui/custom-select";
+import { CustomDatePicker } from "@/components/ui/custom-date-picker";
 
 type MasterData = {
   sites: { id: number; name: string }[];
@@ -288,10 +289,9 @@ export default function WarehousePage() {
               {selectedProduct?.tracksExpiry && (
                 <div className="space-y-1.5">
                   <Label className="text-red-600">Fecha de vencimiento *</Label>
-                  <Input
-                    type="date"
+                  <CustomDatePicker
                     value={expiresAt}
-                    onChange={(e) => setExpiresAt(e.target.value)}
+                    onChange={setExpiresAt}
                     required={selectedProduct.tracksExpiry}
                   />
                 </div>

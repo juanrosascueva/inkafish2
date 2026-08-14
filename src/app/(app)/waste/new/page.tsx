@@ -10,6 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { SearchableSelect } from "@/components/ui/searchable-select";
 import { CustomSelect } from "@/components/ui/custom-select";
+import { CustomDatePicker } from "@/components/ui/custom-date-picker";
 
 const stageOptions = [
   { value: "STORAGE", label: "Almacenamiento" },
@@ -199,7 +200,7 @@ export default function NewWastePage() {
 
             <div className="space-y-1.5">
               <Label>Fecha y hora *</Label>
-              <Input type="datetime-local" value={occurredAt} onChange={(e) => setOccurredAt(e.target.value)} required />
+              <CustomDatePicker type="datetime-local" value={occurredAt} onChange={setOccurredAt} required />
             </div>
 
             <div className="space-y-1.5">
