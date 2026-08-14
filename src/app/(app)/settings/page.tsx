@@ -1,6 +1,6 @@
 "use client";
 import React, { useEffect, useState } from "react";
-import { Plus, Search, Package } from "lucide-react";
+import { Plus, Search, Package, Edit2, Power } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -16,13 +16,16 @@ type Product = {
   active: boolean;
   tracksLot: boolean;
   tracksExpiry: boolean;
+  presentation?: string | null;
+  brand?: string | null;
+  minStock?: number | null;
   imageUrl?: string | null;
   category: { id: string | number; name: string } | null;
   unit: { id: string | number; name: string; symbol: string; allowsDecimals: boolean } | null;
 };
 
-type Category = { id: string | number; name: string; code: string };
-type Unit = { id: string | number; name: string; symbol: string; allowsDecimals: boolean; active: boolean };
+type Category = { id: string | number; name: string; code: string; active?: boolean };
+type Unit = { id: string | number; name: string; symbol: string; allowsDecimals: boolean; active?: boolean };
 
 export default function SettingsPage() {
   const [products, setProducts] = useState<Product[]>([]);
@@ -30,11 +33,25 @@ export default function SettingsPage() {
   const [units, setUnits] = useState<Unit[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+
+  // Product Dialog state
   const [productDialogOpen, setProductDialogOpen] = useState(false);
-  const [form, setForm] = useState({
+  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+  const [productForm, setProductForm] = useState({
     name: "", categoryId: "", unitId: "", presentation: "", brand: "",
     tracksLot: false, tracksExpiry: false, allowsSubstitution: true, minStock: "", notes: "", imageUrl: ""
   });
+
+  // Category Dialog state
+  const [categoryDialogOpen, setCategoryDialogOpen] = useState(false);
+  const [editingCategory, setEditingCategory] = useState<Category | null>(null);
+  const [categoryForm, setCategoryForm] = useState({ name: "", code: "" });
+
+  // Unit Dialog state
+  const [unitDialogOpen, setUnitDialogOpen] = useState(false);
+  const [editingUnit, setEditingUnit] = useState<Unit | null>(null);
+  const [unitForm, setUnitForm] = useState({ name: "", symbol: "", allowsDecimals: false });
+
   const [submitting, setSubmitting] = useState(false);
 
   const fetchData = () => {
@@ -56,22 +73,128 @@ export default function SettingsPage() {
     (p) => p.name.toLowerCase().includes(search.toLowerCase()) || p.code.toLowerCase().includes(search.toLowerCase())
   );
 
+  // PRODUCT HANDLERS
+  const handleOpenCreateProduct = () => {
+    setEditingProduct(null);
+    setProductForm({ name: "", categoryId: "", unitId: "", presentation: "", brand: "", tracksLot: false, tracksExpiry: false, allowsSubstitution: true, minStock: "", notes: "", imageUrl: "" });
+    setProductDialogOpen(true);
+  };
+
+  const handleOpenEditProduct = (p: Product) => {
+    setEditingProduct(p);
+    setProductForm({
+      name: p.name || "",
+      categoryId: String(p.category?.id || ""),
+      unitId: String(p.unit?.id || ""),
+      presentation: p.presentation || "",
+      brand: p.brand || "",
+      tracksLot: p.tracksLot || false,
+      tracksExpiry: p.tracksExpiry || false,
+      allowsSubstitution: true,
+      minStock: p.minStock !== undefined && p.minStock !== null ? String(p.minStock) : "",
+      notes: "",
+      imageUrl: p.imageUrl || "",
+    });
+    setProductDialogOpen(true);
+  };
+
+  const handleToggleProductActive = async (id: string | number) => {
+    try {
+      const res = await fetch(`/api/products/${id}`, { method: "DELETE" });
+      if (res.ok) fetchData();
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
   const handleProductSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form.name || !form.categoryId || !form.unitId) return;
+    if (!productForm.name || !productForm.categoryId || !productForm.unitId) return;
     setSubmitting(true);
     try {
-      const res = await fetch("/api/products", {
-        method: "POST",
+      const url = editingProduct ? `/api/products/${editingProduct.id}` : "/api/products";
+      const method = editingProduct ? "PATCH" : "POST";
+
+      const res = await fetch(url, {
+        method,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          ...form,
-          minStock: form.minStock ? parseFloat(form.minStock) : 0,
+          ...productForm,
+          minStock: productForm.minStock ? parseFloat(productForm.minStock) : 0,
         }),
       });
       if (res.ok) {
         setProductDialogOpen(false);
-        setForm({ name: "", categoryId: "", unitId: "", presentation: "", brand: "", tracksLot: false, tracksExpiry: false, allowsSubstitution: true, minStock: "", notes: "", imageUrl: "" });
+        fetchData();
+      }
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  // CATEGORY HANDLERS
+  const handleOpenCreateCategory = () => {
+    setEditingCategory(null);
+    setCategoryForm({ name: "", code: "" });
+    setCategoryDialogOpen(true);
+  };
+
+  const handleOpenEditCategory = (c: Category) => {
+    setEditingCategory(c);
+    setCategoryForm({ name: c.name, code: c.code });
+    setCategoryDialogOpen(true);
+  };
+
+  const handleCategorySubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!categoryForm.name || !categoryForm.code) return;
+    setSubmitting(true);
+    try {
+      const method = editingCategory ? "PATCH" : "POST";
+      const body = editingCategory ? { id: editingCategory.id, ...categoryForm } : categoryForm;
+
+      const res = await fetch("/api/master?type=category", {
+        method,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      if (res.ok) {
+        setCategoryDialogOpen(false);
+        fetchData();
+      }
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  // UNIT HANDLERS
+  const handleOpenCreateUnit = () => {
+    setEditingUnit(null);
+    setUnitForm({ name: "", symbol: "", allowsDecimals: false });
+    setUnitDialogOpen(true);
+  };
+
+  const handleOpenEditUnit = (u: Unit) => {
+    setEditingUnit(u);
+    setUnitForm({ name: u.name, symbol: u.symbol, allowsDecimals: u.allowsDecimals });
+    setUnitDialogOpen(true);
+  };
+
+  const handleUnitSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!unitForm.name || !unitForm.symbol) return;
+    setSubmitting(true);
+    try {
+      const method = editingUnit ? "PATCH" : "POST";
+      const body = editingUnit ? { id: editingUnit.id, ...unitForm } : unitForm;
+
+      const res = await fetch("/api/master?type=unit", {
+        method,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      if (res.ok) {
+        setUnitDialogOpen(false);
         fetchData();
       }
     } finally {
@@ -93,14 +216,15 @@ export default function SettingsPage() {
           <TabsTrigger value="units">Unidades</TabsTrigger>
         </TabsList>
 
+        {/* PRODUCTS TAB */}
         <TabsContent value="products" className="mt-4 space-y-4">
           <div className="flex items-center gap-3">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
               <Input placeholder="Buscar productos..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9" />
             </div>
-            <Button onClick={() => setProductDialogOpen(true)}>
-              <Plus className="h-4 w-4" />Nuevo
+            <Button onClick={handleOpenCreateProduct}>
+              <Plus className="h-4 w-4" />Nuevo Producto
             </Button>
           </div>
 
@@ -109,7 +233,7 @@ export default function SettingsPage() {
           ) : (
             <div className="space-y-2">
               {filteredProducts.map((p) => (
-                <Card key={p.id} className={!p.active ? "opacity-60" : ""}>
+                <Card key={p.id} className={!p.active ? "opacity-60 bg-gray-50" : ""}>
                   <CardContent className="p-3">
                     <div className="flex items-center gap-3">
                       <div className="w-12 h-12 rounded-lg border border-gray-100 bg-gray-50 overflow-hidden flex items-center justify-center flex-shrink-0">
@@ -131,6 +255,15 @@ export default function SettingsPage() {
                           {p.code} · {p.category?.name || "Sin categoría"} · {p.unit?.name || "Unidad"} ({p.unit?.symbol || "UND"})
                         </p>
                       </div>
+
+                      <div className="flex items-center gap-1 flex-shrink-0">
+                        <Button variant="outline" size="sm" onClick={() => handleOpenEditProduct(p)} className="h-8 px-2 text-xs">
+                          <Edit2 className="h-3.5 w-3.5 mr-1" />Editar
+                        </Button>
+                        <Button variant="ghost" size="sm" onClick={() => handleToggleProductActive(p.id)} title={p.active ? "Desactivar" : "Activar"} className="h-8 px-2 text-xs text-gray-500 hover:text-gray-900">
+                          <Power className={`h-3.5 w-3.5 ${p.active ? "text-red-500" : "text-green-500"}`} />
+                        </Button>
+                      </div>
                     </div>
                   </CardContent>
                 </Card>
@@ -142,35 +275,50 @@ export default function SettingsPage() {
           )}
         </TabsContent>
 
-        <TabsContent value="categories" className="mt-4">
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+        {/* CATEGORIES TAB */}
+        <TabsContent value="categories" className="mt-4 space-y-4">
+          <div className="flex justify-end">
+            <Button onClick={handleOpenCreateCategory}>
+              <Plus className="h-4 w-4" />Nueva Categoría
+            </Button>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
             {categories.map((c) => (
               <Card key={c.id}>
-                <CardContent className="p-3">
-                  <p className="font-medium text-gray-900 text-sm">{c.name}</p>
-                  <p className="text-xs text-gray-400 font-mono">{c.code}</p>
+                <CardContent className="p-3 flex items-center justify-between">
+                  <div>
+                    <p className="font-medium text-gray-900 text-sm">{c.name}</p>
+                    <p className="text-xs text-gray-400 font-mono">{c.code}</p>
+                  </div>
+                  <Button variant="ghost" size="sm" onClick={() => handleOpenEditCategory(c)} className="h-8 px-2 text-xs">
+                    <Edit2 className="h-3.5 w-3.5 text-gray-500" />
+                  </Button>
                 </CardContent>
               </Card>
             ))}
           </div>
         </TabsContent>
 
-        <TabsContent value="units" className="mt-4">
+        {/* UNITS TAB */}
+        <TabsContent value="units" className="mt-4 space-y-4">
+          <div className="flex justify-end">
+            <Button onClick={handleOpenCreateUnit}>
+              <Plus className="h-4 w-4" />Nueva Unidad
+            </Button>
+          </div>
           <div className="space-y-2">
             {units.map((u) => (
               <Card key={u.id}>
-                <CardContent className="p-3">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="font-medium text-gray-900 text-sm">{u.name}</p>
-                      <p className="text-xs text-gray-400">
-                        Símbolo: {u.symbol} · {u.allowsDecimals ? "Permite decimales" : "Solo enteros"}
-                      </p>
-                    </div>
-                    <span className={`text-xs px-2 py-0.5 rounded-full ${u.active ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-600"}`}>
-                      {u.active ? "Activo" : "Inactivo"}
-                    </span>
+                <CardContent className="p-3 flex items-center justify-between">
+                  <div>
+                    <p className="font-medium text-gray-900 text-sm">{u.name}</p>
+                    <p className="text-xs text-gray-400">
+                      Símbolo: <span className="font-mono">{u.symbol}</span> · {u.allowsDecimals ? "Permite decimales" : "Solo enteros"}
+                    </p>
                   </div>
+                  <Button variant="ghost" size="sm" onClick={() => handleOpenEditUnit(u)} className="h-8 px-2 text-xs">
+                    <Edit2 className="h-3.5 w-3.5 text-gray-500" />
+                  </Button>
                 </CardContent>
               </Card>
             ))}
@@ -178,18 +326,18 @@ export default function SettingsPage() {
         </TabsContent>
       </Tabs>
 
-      {/* Product dialog */}
+      {/* Product Dialog */}
       <Dialog open={productDialogOpen} onOpenChange={setProductDialogOpen}>
         <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Nuevo Producto</DialogTitle>
+            <DialogTitle>{editingProduct ? "Editar Producto" : "Nuevo Producto"}</DialogTitle>
           </DialogHeader>
           <form onSubmit={handleProductSubmit} className="space-y-4">
             <div className="space-y-1.5">
               <Label>Fotografía del producto (Cloudinary)</Label>
               <ImageUpload
-                value={form.imageUrl}
-                onChange={(url) => setForm({ ...form, imageUrl: url })}
+                value={productForm.imageUrl}
+                onChange={(url) => setProductForm({ ...productForm, imageUrl: url })}
                 disabled={submitting}
               />
             </div>
@@ -197,8 +345,8 @@ export default function SettingsPage() {
             <div className="space-y-1.5">
               <Label>Nombre del Producto *</Label>
               <Input
-                value={form.name}
-                onChange={(e) => setForm({ ...form, name: e.target.value })}
+                value={productForm.name}
+                onChange={(e) => setProductForm({ ...productForm, name: e.target.value })}
                 placeholder="Ej: Lomo Fino de Res"
                 required
               />
@@ -209,8 +357,8 @@ export default function SettingsPage() {
                 <Label>Categoría *</Label>
                 <select
                   className="w-full h-10 rounded-lg border border-gray-300 bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  value={form.categoryId}
-                  onChange={(e) => setForm({ ...form, categoryId: e.target.value })}
+                  value={productForm.categoryId}
+                  onChange={(e) => setProductForm({ ...productForm, categoryId: e.target.value })}
                   required
                 >
                   <option value="">Seleccionar</option>
@@ -221,8 +369,8 @@ export default function SettingsPage() {
                 <Label>Unidad *</Label>
                 <select
                   className="w-full h-10 rounded-lg border border-gray-300 bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  value={form.unitId}
-                  onChange={(e) => setForm({ ...form, unitId: e.target.value })}
+                  value={productForm.unitId}
+                  onChange={(e) => setProductForm({ ...productForm, unitId: e.target.value })}
                   required
                 >
                   <option value="">Seleccionar</option>
@@ -231,36 +379,88 @@ export default function SettingsPage() {
               </div>
               <div className="space-y-1.5">
                 <Label>Presentación</Label>
-                <Input value={form.presentation} onChange={(e) => setForm({ ...form, presentation: e.target.value })} placeholder="Ej: 1 kg / Caja 12u" />
+                <Input value={productForm.presentation} onChange={(e) => setProductForm({ ...productForm, presentation: e.target.value })} placeholder="Ej: 1 kg / Caja 12u" />
               </div>
               <div className="space-y-1.5">
                 <Label>Marca</Label>
-                <Input value={form.brand} onChange={(e) => setForm({ ...form, brand: e.target.value })} placeholder="Ej: San Fernando" />
+                <Input value={productForm.brand} onChange={(e) => setProductForm({ ...productForm, brand: e.target.value })} placeholder="Ej: San Fernando" />
               </div>
               <div className="space-y-1.5 col-span-2 sm:col-span-1">
                 <Label>Stock mínimo</Label>
-                <Input type="number" min="0" step="any" value={form.minStock} onChange={(e) => setForm({ ...form, minStock: e.target.value })} placeholder="0" />
+                <Input type="number" min="0" step="any" value={productForm.minStock} onChange={(e) => setProductForm({ ...productForm, minStock: e.target.value })} placeholder="0" />
               </div>
             </div>
 
             <div className="flex flex-wrap gap-4 pt-2">
               <label className="flex items-center gap-2 text-sm cursor-pointer">
-                <input type="checkbox" checked={form.tracksLot} onChange={(e) => setForm({ ...form, tracksLot: e.target.checked })} className="rounded" />
+                <input type="checkbox" checked={productForm.tracksLot} onChange={(e) => setProductForm({ ...productForm, tracksLot: e.target.checked })} className="rounded" />
                 Maneja lote
               </label>
               <label className="flex items-center gap-2 text-sm cursor-pointer">
-                <input type="checkbox" checked={form.tracksExpiry} onChange={(e) => setForm({ ...form, tracksExpiry: e.target.checked })} className="rounded" />
+                <input type="checkbox" checked={productForm.tracksExpiry} onChange={(e) => setProductForm({ ...productForm, tracksExpiry: e.target.checked })} className="rounded" />
                 Maneja vencimiento
               </label>
               <label className="flex items-center gap-2 text-sm cursor-pointer">
-                <input type="checkbox" checked={form.allowsSubstitution} onChange={(e) => setForm({ ...form, allowsSubstitution: e.target.checked })} className="rounded" />
+                <input type="checkbox" checked={productForm.allowsSubstitution} onChange={(e) => setProductForm({ ...productForm, allowsSubstitution: e.target.checked })} className="rounded" />
                 Permite sustitución
               </label>
             </div>
 
             <DialogFooter className="pt-2">
               <Button type="button" variant="outline" onClick={() => setProductDialogOpen(false)}>Cancelar</Button>
-              <Button type="submit" disabled={submitting}>{submitting ? "Guardando..." : "Guardar Producto"}</Button>
+              <Button type="submit" disabled={submitting}>{submitting ? "Guardando..." : (editingProduct ? "Actualizar Producto" : "Guardar Producto")}</Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Category Dialog */}
+      <Dialog open={categoryDialogOpen} onOpenChange={setCategoryDialogOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>{editingCategory ? "Editar Categoría" : "Nueva Categoría"}</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleCategorySubmit} className="space-y-4">
+            <div className="space-y-1.5">
+              <Label>Nombre de la Categoría *</Label>
+              <Input value={categoryForm.name} onChange={(e) => setCategoryForm({ ...categoryForm, name: e.target.value })} placeholder="Ej: Proteínas" required />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Código *</Label>
+              <Input value={categoryForm.code} onChange={(e) => setCategoryForm({ ...categoryForm, code: e.target.value.toUpperCase() })} placeholder="Ej: PRO" required />
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setCategoryDialogOpen(false)}>Cancelar</Button>
+              <Button type="submit" disabled={submitting}>{submitting ? "Guardando..." : (editingCategory ? "Actualizar" : "Guardar")}</Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Unit Dialog */}
+      <Dialog open={unitDialogOpen} onOpenChange={setUnitDialogOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>{editingUnit ? "Editar Unidad" : "Nueva Unidad"}</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleUnitSubmit} className="space-y-4">
+            <div className="space-y-1.5">
+              <Label>Nombre de la Unidad *</Label>
+              <Input value={unitForm.name} onChange={(e) => setUnitForm({ ...unitForm, name: e.target.value })} placeholder="Ej: Kilogramo" required />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Símbolo *</Label>
+              <Input value={unitForm.symbol} onChange={(e) => setUnitForm({ ...unitForm, symbol: e.target.value.toUpperCase() })} placeholder="Ej: KG" required />
+            </div>
+            <div className="pt-2">
+              <label className="flex items-center gap-2 text-sm cursor-pointer">
+                <input type="checkbox" checked={unitForm.allowsDecimals} onChange={(e) => setUnitForm({ ...unitForm, allowsDecimals: e.target.checked })} className="rounded" />
+                Permite decimales
+              </label>
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setUnitDialogOpen(false)}>Cancelar</Button>
+              <Button type="submit" disabled={submitting}>{submitting ? "Guardando..." : (editingUnit ? "Actualizar" : "Guardar")}</Button>
             </DialogFooter>
           </form>
         </DialogContent>

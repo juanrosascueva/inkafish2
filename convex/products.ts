@@ -50,3 +50,44 @@ export const create = mutation({
     });
   },
 });
+
+export const update = mutation({
+  args: {
+    id: v.id("products"),
+    name: v.string(),
+    categoryId: v.id("categories"),
+    unitId: v.id("units"),
+    presentation: v.optional(v.string()),
+    brand: v.optional(v.string()),
+    tracksLot: v.boolean(),
+    tracksExpiry: v.boolean(),
+    allowsSubstitution: v.boolean(),
+    minStock: v.number(),
+    notes: v.optional(v.string()),
+    imageUrl: v.optional(v.string()),
+  },
+  handler: async (ctx: any, args: any) => {
+    const { id, ...data } = args;
+    await ctx.db.patch(id, {
+      ...data,
+      updatedAt: Date.now(),
+    });
+    return true;
+  },
+});
+
+export const toggleActive = mutation({
+  args: {
+    id: v.id("products"),
+  },
+  handler: async (ctx: any, args: any) => {
+    const product = await ctx.db.get(args.id);
+    if (!product) throw new Error("Producto no encontrado");
+
+    await ctx.db.patch(args.id, {
+      active: !product.active,
+      updatedAt: Date.now(),
+    });
+    return true;
+  },
+});
