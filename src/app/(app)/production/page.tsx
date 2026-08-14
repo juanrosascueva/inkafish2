@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Plus, Play, CheckCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { SkeletonList } from "@/components/ui/skeleton-card";
 import { cn, getStatusColor, getStatusLabel, formatDate } from "@/lib/utils";
 
 type ProductionOrder = {
@@ -68,7 +69,7 @@ export default function ProductionPage() {
       </div>
 
       {loading ? (
-        <div className="space-y-3">{[1, 2, 3].map((i) => <div key={i} className="h-24 bg-white rounded-xl border animate-pulse" />)}</div>
+        <SkeletonList count={3} />
       ) : orders.length === 0 ? (
         <Card><CardContent className="py-12 text-center text-gray-400">No hay órdenes de producción</CardContent></Card>
       ) : (

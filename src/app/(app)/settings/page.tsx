@@ -8,6 +8,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { ImageUpload } from "@/components/ui/image-upload";
+import { CustomSelect } from "@/components/ui/custom-select";
 
 type Product = {
   id: string | number;
@@ -386,27 +387,21 @@ export default function SettingsPage() {
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1.5">
                 <Label>Categoría *</Label>
-                <select
-                  className="w-full h-10 rounded-lg border border-gray-300 bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                <CustomSelect
+                  options={categories.map((c) => ({ value: String(c.id), label: c.name }))}
                   value={productForm.categoryId}
-                  onChange={(e) => setProductForm({ ...productForm, categoryId: e.target.value })}
-                  required
-                >
-                  <option value="">Seleccionar</option>
-                  {categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-                </select>
+                  onChange={(val) => setProductForm({ ...productForm, categoryId: val })}
+                  placeholder="Seleccionar categoría"
+                />
               </div>
               <div className="space-y-1.5">
                 <Label>Unidad *</Label>
-                <select
-                  className="w-full h-10 rounded-lg border border-gray-300 bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                <CustomSelect
+                  options={units.map((u) => ({ value: String(u.id), label: `${u.name} (${u.symbol})` }))}
                   value={productForm.unitId}
-                  onChange={(e) => setProductForm({ ...productForm, unitId: e.target.value })}
-                  required
-                >
-                  <option value="">Seleccionar</option>
-                  {units.map((u) => <option key={u.id} value={u.id}>{u.name} ({u.symbol})</option>)}
-                </select>
+                  onChange={(val) => setProductForm({ ...productForm, unitId: val })}
+                  placeholder="Seleccionar unidad"
+                />
               </div>
               <div className="space-y-1.5">
                 <Label>Presentación</Label>

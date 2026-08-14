@@ -8,6 +8,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { SearchableSelect } from "@/components/ui/searchable-select";
+import { CustomSelect } from "@/components/ui/custom-select";
 
 type Site = { id: number; name: string };
 type Area = { id: number; name: string; siteId: number };
@@ -115,6 +117,13 @@ export default function NewProductionPage() {
     }
   };
 
+  const productOptions = products.map((p) => ({
+    value: String(p.id),
+    label: p.name,
+    code: p.code,
+    sublabel: p.unit?.symbol || "UND",
+  }));
+
   return (
     <div className="p-4 lg:p-6 max-w-2xl mx-auto space-y-6">
       <div className="flex items-center gap-3">
@@ -132,17 +141,21 @@ export default function NewProductionPage() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-1.5">
                 <Label>Sede *</Label>
-                <select className="w-full h-10 rounded-lg border border-gray-300 bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" value={siteId} onChange={(e) => { setSiteId(e.target.value); setAreaId(""); }} required>
-                  <option value="">Seleccionar</option>
-                  {sites.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
-                </select>
+                <CustomSelect
+                  options={sites.map((s) => ({ value: String(s.id), label: s.name }))}
+                  value={siteId}
+                  onChange={(val) => { setSiteId(val); setAreaId(""); }}
+                  placeholder="Seleccionar sede"
+                />
               </div>
               <div className="space-y-1.5">
                 <Label>Área</Label>
-                <select className="w-full h-10 rounded-lg border border-gray-300 bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" value={areaId} onChange={(e) => setAreaId(e.target.value)}>
-                  <option value="">Sin área específica</option>
-                  {filteredAreas.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
-                </select>
+                <CustomSelect
+                  options={filteredAreas.map((a) => ({ value: String(a.id), label: a.name }))}
+                  value={areaId}
+                  onChange={setAreaId}
+                  placeholder="Sin área específica"
+                />
               </div>
               <div className="space-y-1.5">
                 <Label>Fecha planificada *</Label>
@@ -150,12 +163,17 @@ export default function NewProductionPage() {
               </div>
               <div className="space-y-1.5">
                 <Label>Turno</Label>
-                <select className="w-full h-10 rounded-lg border border-gray-300 bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" value={shift} onChange={(e) => setShift(e.target.value)}>
-                  <option value="">Sin turno</option>
-                  <option value="MAÑANA">Mañana</option>
-                  <option value="TARDE">Tarde</option>
-                  <option value="NOCHE">Noche</option>
-                </select>
+                <CustomSelect
+                  options={[
+                    { value: "", label: "Sin turno" },
+                    { value: "MAÑANA", label: "Mañana" },
+                    { value: "TARDE", label: "Tarde" },
+                    { value: "NOCHE", label: "Noche" },
+                  ]}
+                  value={shift}
+                  onChange={setShift}
+                  placeholder="Sin turno"
+                />
               </div>
             </div>
             <div className="space-y-1.5">
@@ -179,17 +197,20 @@ export default function NewProductionPage() {
           <CardContent className="space-y-3">
             {inputs.length === 0 && <p className="text-center text-gray-400 text-sm py-4">Agregue insumos a consumir</p>}
             {inputs.map((inp, idx) => (
-              <div key={inp.tempId} className="p-3 border border-blue-100 bg-blue-50/30 rounded-xl space-y-3">
+              <div key={inp.tempId} className="p-3 border border-teal-100 bg-teal-50/20 rounded-xl space-y-3">
                 <div className="flex items-center justify-between">
-                  <p className="text-xs font-medium text-blue-700">Insumo {idx + 1}</p>
+                  <p className="text-xs font-semibold text-[#1b6970]">Insumo {idx + 1}</p>
                   <button type="button" onClick={() => removeInput(inp.tempId)} className="p-1 text-red-500 hover:bg-red-50 rounded"><Trash2 className="h-4 w-4" /></button>
                 </div>
                 <div className="space-y-1.5">
-                  <Label>Producto *</Label>
-                  <select className="w-full h-10 rounded-lg border border-gray-300 bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" value={inp.productId} onChange={(e) => handleProductSelect(inp.tempId, e.target.value, "input")}>
-                    <option value="">Seleccionar</option>
-                    {products.map((p) => <option key={p.id} value={p.id}>{p.code} - {p.name}</option>)}
-                  </select>
+                  <Label>Insumo *</Label>
+                  <SearchableSelect
+                    options={productOptions}
+                    value={inp.productId}
+                    onChange={(val) => handleProductSelect(inp.tempId, val, "input")}
+                    placeholder="Buscar o seleccionar insumo..."
+                    searchPlaceholder="Escribe el nombre o código..."
+                  />
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1.5">
@@ -198,10 +219,12 @@ export default function NewProductionPage() {
                   </div>
                   <div className="space-y-1.5">
                     <Label>Unidad *</Label>
-                    <select className="w-full h-10 rounded-lg border border-gray-300 bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" value={inp.unitId} onChange={(e) => updateInput(inp.tempId, { unitId: e.target.value })}>
-                      <option value="">Seleccionar</option>
-                      {units.map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}
-                    </select>
+                    <CustomSelect
+                      options={units.map((u) => ({ value: String(u.id), label: `${u.name} (${u.symbol})` }))}
+                      value={inp.unitId}
+                      onChange={(val) => updateInput(inp.tempId, { unitId: val })}
+                      placeholder="Seleccionar unidad"
+                    />
                   </div>
                 </div>
               </div>
@@ -225,15 +248,18 @@ export default function NewProductionPage() {
             {outputs.map((out, idx) => (
               <div key={out.tempId} className="p-3 border border-green-100 bg-green-50/30 rounded-xl space-y-3">
                 <div className="flex items-center justify-between">
-                  <p className="text-xs font-medium text-green-700">Resultado {idx + 1}</p>
+                  <p className="text-xs font-semibold text-green-700">Resultado {idx + 1}</p>
                   <button type="button" onClick={() => removeOutput(out.tempId)} className="p-1 text-red-500 hover:bg-red-50 rounded"><Trash2 className="h-4 w-4" /></button>
                 </div>
                 <div className="space-y-1.5">
                   <Label>Producto resultante *</Label>
-                  <select className="w-full h-10 rounded-lg border border-gray-300 bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" value={out.outputProductId} onChange={(e) => handleProductSelect(out.tempId, e.target.value, "output")}>
-                    <option value="">Seleccionar</option>
-                    {products.map((p) => <option key={p.id} value={p.id}>{p.code} - {p.name}</option>)}
-                  </select>
+                  <SearchableSelect
+                    options={productOptions}
+                    value={out.outputProductId}
+                    onChange={(val) => handleProductSelect(out.tempId, val, "output")}
+                    placeholder="Buscar o seleccionar producto resultante..."
+                    searchPlaceholder="Escribe el nombre o código..."
+                  />
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1.5">
@@ -242,18 +268,22 @@ export default function NewProductionPage() {
                   </div>
                   <div className="space-y-1.5">
                     <Label>Unidad *</Label>
-                    <select className="w-full h-10 rounded-lg border border-gray-300 bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" value={out.unitId} onChange={(e) => updateOutput(out.tempId, { unitId: e.target.value })}>
-                      <option value="">Seleccionar</option>
-                      {units.map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}
-                    </select>
+                    <CustomSelect
+                      options={units.map((u) => ({ value: String(u.id), label: `${u.name} (${u.symbol})` }))}
+                      value={out.unitId}
+                      onChange={(val) => updateOutput(out.tempId, { unitId: val })}
+                      placeholder="Seleccionar unidad"
+                    />
                   </div>
                 </div>
                 <div className="space-y-1.5">
                   <Label>Almacén destino</Label>
-                  <select className="w-full h-10 rounded-lg border border-gray-300 bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" value={out.destinationWarehouseId} onChange={(e) => updateOutput(out.tempId, { destinationWarehouseId: e.target.value })}>
-                    <option value="">Sin almacén específico</option>
-                    {filteredWarehouses.map((w) => <option key={w.id} value={w.id}>{w.name}</option>)}
-                  </select>
+                  <CustomSelect
+                    options={filteredWarehouses.map((w) => ({ value: String(w.id), label: w.name }))}
+                    value={out.destinationWarehouseId}
+                    onChange={(val) => updateOutput(out.tempId, { destinationWarehouseId: val })}
+                    placeholder="Sin almacén específico"
+                  />
                 </div>
               </div>
             ))}

@@ -7,6 +7,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { SearchableSelect } from "@/components/ui/searchable-select";
+import { CustomSelect } from "@/components/ui/custom-select";
 
 type MasterData = {
   sites: { id: number; name: string }[];
@@ -81,7 +83,7 @@ export default function NewRequestPage() {
   };
 
   const handleProductSelect = (tempId: string, productId: string) => {
-    const product = products.find((p) => p.id === parseInt(productId));
+    const product = products.find((p) => String(p.id) === productId);
     if (product) {
       updateItem(tempId, {
         productId: product.id,
@@ -170,6 +172,13 @@ export default function NewRequestPage() {
 
   const isUrgent = priority === "URGENT" || type === "URGENT";
 
+  const productOptions = products.map((p) => ({
+    value: String(p.id),
+    label: p.name,
+    code: p.code,
+    sublabel: p.unit?.symbol || "UND",
+  }));
+
   return (
     <div className="p-4 lg:p-6 max-w-3xl mx-auto space-y-6">
       <div>
@@ -185,31 +194,21 @@ export default function NewRequestPage() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-1.5">
                 <Label>Sede *</Label>
-                <select
-                  className="w-full h-10 rounded-lg border border-gray-300 bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                <CustomSelect
+                  options={master.sites.map((s) => ({ value: String(s.id), label: s.name }))}
                   value={siteId}
-                  onChange={(e) => { setSiteId(e.target.value); setAreaId(""); }}
-                  required
-                >
-                  <option value="">Seleccionar sede</option>
-                  {master.sites.map((s) => (
-                    <option key={s.id} value={s.id}>{s.name}</option>
-                  ))}
-                </select>
+                  onChange={(val) => { setSiteId(val); setAreaId(""); }}
+                  placeholder="Seleccionar sede"
+                />
               </div>
               <div className="space-y-1.5">
                 <Label>Área *</Label>
-                <select
-                  className="w-full h-10 rounded-lg border border-gray-300 bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                <CustomSelect
+                  options={filteredAreas.map((a) => ({ value: String(a.id), label: a.name }))}
                   value={areaId}
-                  onChange={(e) => setAreaId(e.target.value)}
-                  required
-                >
-                  <option value="">Seleccionar área</option>
-                  {filteredAreas.map((a) => (
-                    <option key={a.id} value={a.id}>{a.name}</option>
-                  ))}
-                </select>
+                  onChange={setAreaId}
+                  placeholder="Seleccionar área"
+                />
               </div>
             </div>
 
@@ -226,42 +225,43 @@ export default function NewRequestPage() {
               </div>
               <div className="space-y-1.5">
                 <Label>Turno</Label>
-                <select
-                  className="w-full h-10 rounded-lg border border-gray-300 bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                <CustomSelect
+                  options={[
+                    { value: "", label: "Sin turno" },
+                    { value: "MAÑANA", label: "Mañana" },
+                    { value: "TARDE", label: "Tarde" },
+                    { value: "NOCHE", label: "Noche" },
+                  ]}
                   value={shift}
-                  onChange={(e) => setShift(e.target.value)}
-                >
-                  <option value="">Sin turno</option>
-                  <option value="MAÑANA">Mañana</option>
-                  <option value="TARDE">Tarde</option>
-                  <option value="NOCHE">Noche</option>
-                </select>
+                  onChange={setShift}
+                  placeholder="Sin turno"
+                />
               </div>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-1.5">
                 <Label>Prioridad</Label>
-                <select
-                  className="w-full h-10 rounded-lg border border-gray-300 bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                <CustomSelect
+                  options={[
+                    { value: "NORMAL", label: "Normal" },
+                    { value: "URGENT", label: "🚨 Urgente" },
+                  ]}
                   value={priority}
-                  onChange={(e) => setPriority(e.target.value)}
-                >
-                  <option value="NORMAL">Normal</option>
-                  <option value="URGENT">🚨 Urgente</option>
-                </select>
+                  onChange={setPriority}
+                />
               </div>
               <div className="space-y-1.5">
                 <Label>Tipo</Label>
-                <select
-                  className="w-full h-10 rounded-lg border border-gray-300 bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                <CustomSelect
+                  options={[
+                    { value: "REGULAR", label: "Regular" },
+                    { value: "EXTRAORDINARY", label: "Extraordinaria" },
+                    { value: "URGENT", label: "Urgente" },
+                  ]}
                   value={type}
-                  onChange={(e) => setType(e.target.value)}
-                >
-                  <option value="REGULAR">Regular</option>
-                  <option value="EXTRAORDINARY">Extraordinaria</option>
-                  <option value="URGENT">Urgente</option>
-                </select>
+                  onChange={setType}
+                />
               </div>
             </div>
 
@@ -342,19 +342,14 @@ export default function NewRequestPage() {
                   </div>
                 ) : (
                   <div className="space-y-1.5">
-                    <Label>Producto *</Label>
-                    <select
-                      className="w-full h-10 rounded-lg border border-gray-300 bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      value={item.productId ?? ""}
-                      onChange={(e) => handleProductSelect(item.tempId, e.target.value)}
-                    >
-                      <option value="">Seleccionar producto</option>
-                      {products.map((p) => (
-                        <option key={p.id} value={p.id}>
-                          {p.code} - {p.name}
-                        </option>
-                      ))}
-                    </select>
+                    <Label>Producto / Insumo *</Label>
+                    <SearchableSelect
+                      options={productOptions}
+                      value={String(item.productId ?? "")}
+                      onChange={(val) => handleProductSelect(item.tempId, val)}
+                      placeholder="Buscar o seleccionar producto..."
+                      searchPlaceholder="Escribe el nombre o código..."
+                    />
                   </div>
                 )}
 
@@ -372,16 +367,12 @@ export default function NewRequestPage() {
                   </div>
                   <div className="space-y-1.5">
                     <Label>Unidad *</Label>
-                    <select
-                      className="w-full h-10 rounded-lg border border-gray-300 bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      value={item.unitId ?? ""}
-                      onChange={(e) => updateItem(item.tempId, { unitId: parseInt(e.target.value) })}
-                    >
-                      <option value="">Seleccionar</option>
-                      {master.units.map((u) => (
-                        <option key={u.id} value={u.id}>{u.name} ({u.symbol})</option>
-                      ))}
-                    </select>
+                    <CustomSelect
+                      options={master.units.map((u) => ({ value: String(u.id), label: `${u.name} (${u.symbol})` }))}
+                      value={String(item.unitId ?? "")}
+                      onChange={(val) => updateItem(item.tempId, { unitId: parseInt(val) })}
+                      placeholder="Seleccionar unidad"
+                    />
                   </div>
                 </div>
 

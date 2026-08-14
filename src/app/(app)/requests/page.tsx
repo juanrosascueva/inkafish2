@@ -5,6 +5,7 @@ import { Plus, Search, Filter } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
+import { SkeletonList } from "@/components/ui/skeleton-card";
 import { cn, getStatusColor, getStatusLabel, formatDate } from "@/lib/utils";
 
 type Request = {
@@ -95,11 +96,7 @@ export default function RequestsPage() {
 
       {/* List */}
       {loading ? (
-        <div className="space-y-3">
-          {[1, 2, 3, 4, 5].map((i) => (
-            <div key={i} className="h-20 bg-white rounded-xl border border-gray-200 animate-pulse" />
-          ))}
-        </div>
+        <SkeletonList count={4} />
       ) : filtered.length === 0 ? (
         <Card>
           <CardContent className="py-12 text-center">

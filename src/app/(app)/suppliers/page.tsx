@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { SkeletonList } from "@/components/ui/skeleton-card";
 
 type Supplier = {
   id: string | number;
@@ -110,7 +111,7 @@ export default function SuppliersPage() {
       </div>
 
       {loading ? (
-        <div className="space-y-3">{[1, 2, 3].map((i) => <div key={i} className="h-20 bg-white rounded-xl border animate-pulse" />)}</div>
+        <SkeletonList count={3} />
       ) : filtered.length === 0 ? (
         <Card><CardContent className="py-12 text-center text-gray-400">No hay proveedores registrados</CardContent></Card>
       ) : (

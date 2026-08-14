@@ -1,11 +1,14 @@
 "use client";
 import React, { useEffect, useState } from "react";
-import { Plus, AlertTriangle } from "lucide-react";
+import { AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { SkeletonCard } from "@/components/ui/skeleton-card";
+import { SearchableSelect } from "@/components/ui/searchable-select";
+import { CustomSelect } from "@/components/ui/custom-select";
 
 type MasterData = {
   sites: { id: number; name: string }[];
@@ -40,6 +43,7 @@ export default function WarehousePage() {
   const [master, setMaster] = useState<MasterData>({ sites: [], units: [], warehouses: [] });
   const [products, setProducts] = useState<Product[]>([]);
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
+  const [loading, setLoading] = useState(true);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -68,6 +72,7 @@ export default function WarehousePage() {
       setMaster(masterData);
       setProducts(productsData.products ?? []);
       setSuppliers(suppliersData.suppliers ?? []);
+      setLoading(false);
     });
   }, []);
 
@@ -150,6 +155,13 @@ export default function WarehousePage() {
     }
   };
 
+  const productOptions = products.map((p) => ({
+    value: String(p.id),
+    label: p.name,
+    code: p.code,
+    sublabel: p.unit?.symbol || "UND",
+  }));
+
   return (
     <div className="p-4 lg:p-6 max-w-2xl mx-auto space-y-6">
       <div>
@@ -163,163 +175,153 @@ export default function WarehousePage() {
         </div>
       )}
 
-      <form onSubmit={handleSubmit}>
-        <Card>
-          <CardHeader><CardTitle className="text-base">Datos de entrada</CardTitle></CardHeader>
-          <CardContent className="space-y-4">
-            {/* Sede y Almacén */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="space-y-1.5">
-                <Label>Sede *</Label>
-                <select
-                  className="w-full h-10 rounded-lg border border-gray-300 bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  value={siteId}
-                  onChange={(e) => { setSiteId(e.target.value); setWarehouseId(""); }}
-                  required
-                >
-                  <option value="">Seleccionar sede</option>
-                  {master.sites.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
-                </select>
+      {loading ? (
+        <div className="space-y-3">
+          <SkeletonCard />
+          <SkeletonCard />
+        </div>
+      ) : (
+        <form onSubmit={handleSubmit}>
+          <Card>
+            <CardHeader><CardTitle className="text-base">Datos de entrada</CardTitle></CardHeader>
+            <CardContent className="space-y-4">
+              {/* Sede y Almacén */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <Label>Sede *</Label>
+                  <CustomSelect
+                    options={master.sites.map((s) => ({ value: String(s.id), label: s.name }))}
+                    value={siteId}
+                    onChange={(val) => { setSiteId(val); setWarehouseId(""); }}
+                    placeholder="Seleccionar sede"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label>Almacén</Label>
+                  <CustomSelect
+                    options={filteredWarehouses.map((w) => ({ value: String(w.id), label: w.name }))}
+                    value={warehouseId}
+                    onChange={setWarehouseId}
+                    placeholder="Sin almacén específico"
+                  />
+                </div>
               </div>
-              <div className="space-y-1.5">
-                <Label>Almacén</Label>
-                <select
-                  className="w-full h-10 rounded-lg border border-gray-300 bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  value={warehouseId}
-                  onChange={(e) => setWarehouseId(e.target.value)}
-                >
-                  <option value="">Sin almacén específico</option>
-                  {filteredWarehouses.map((w) => <option key={w.id} value={w.id}>{w.name}</option>)}
-                </select>
-              </div>
-            </div>
 
-            {/* Origen */}
-            <div className="space-y-1.5">
-              <Label>Origen *</Label>
-              <select
-                className="w-full h-10 rounded-lg border border-gray-300 bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                value={origin}
-                onChange={(e) => setOrigin(e.target.value)}
-              >
-                {originOptions.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-              </select>
-            </div>
-
-            {/* Proveedor (conditional) */}
-            {origin === "SUPPLIER" && (
+              {/* Origen */}
               <div className="space-y-1.5">
-                <Label>Proveedor *</Label>
-                <select
-                  className="w-full h-10 rounded-lg border border-gray-300 bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  value={supplierId}
-                  onChange={(e) => setSupplierId(e.target.value)}
-                  required
-                >
-                  <option value="">Seleccionar proveedor</option>
-                  {suppliers.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
-                </select>
-              </div>
-            )}
-
-            {/* Producto */}
-            <div className="space-y-1.5">
-              <Label>Producto *</Label>
-              <select
-                className="w-full h-10 rounded-lg border border-gray-300 bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                value={productId}
-                onChange={(e) => setProductId(e.target.value)}
-                required
-              >
-                <option value="">Seleccionar producto</option>
-                {products.map((p) => (
-                  <option key={p.id} value={p.id}>{p.code} - {p.name}</option>
-                ))}
-              </select>
-            </div>
-
-            {/* Cantidad y Unidad */}
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-1.5">
-                <Label>Cantidad *</Label>
-                <Input
-                  type="number"
-                  min="0"
-                  step={selectedProduct?.unit?.allowsDecimals ? "0.001" : "1"}
-                  value={quantity}
-                  onChange={(e) => setQuantity(e.target.value)}
-                  placeholder="0"
-                  required
-                />
-                {selectedProduct?.unit && (
-                  <p className="text-xs text-gray-500">
-                    {selectedProduct.unit.allowsDecimals ? `Permite decimales (${selectedProduct.unit.symbol})` : "Solo números enteros"}
-                  </p>
-                )}
-              </div>
-              <div className="space-y-1.5">
-                <Label>Unidad *</Label>
-                <select
-                  className="w-full h-10 rounded-lg border border-gray-300 bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  value={unitId}
-                  onChange={(e) => setUnitId(e.target.value)}
-                  required
-                >
-                  <option value="">Seleccionar</option>
-                  {master.units.map((u) => <option key={u.id} value={u.id}>{u.name} ({u.symbol})</option>)}
-                </select>
-              </div>
-            </div>
-
-            {/* Lote (conditional) */}
-            {selectedProduct?.tracksLot && (
-              <div className="space-y-1.5">
-                <Label>Número de lote</Label>
-                <Input
-                  value={lotNumber}
-                  onChange={(e) => setLotNumber(e.target.value)}
-                  placeholder="Ej: LOT-2026-001"
+                <Label>Origen *</Label>
+                <CustomSelect
+                  options={originOptions}
+                  value={origin}
+                  onChange={setOrigin}
                 />
               </div>
-            )}
 
-            {/* Vencimiento (conditional) */}
-            {selectedProduct?.tracksExpiry && (
+              {/* Proveedor (conditional) */}
+              {origin === "SUPPLIER" && (
+                <div className="space-y-1.5">
+                  <Label>Proveedor *</Label>
+                  <CustomSelect
+                    options={suppliers.map((s) => ({ value: String(s.id), label: s.name }))}
+                    value={supplierId}
+                    onChange={setSupplierId}
+                    placeholder="Seleccionar proveedor"
+                  />
+                </div>
+              )}
+
+              {/* Producto */}
               <div className="space-y-1.5">
-                <Label className="text-red-600">Fecha de vencimiento *</Label>
-                <Input
-                  type="date"
-                  value={expiresAt}
-                  onChange={(e) => setExpiresAt(e.target.value)}
-                  required={selectedProduct.tracksExpiry}
+                <Label>Producto / Insumo *</Label>
+                <SearchableSelect
+                  options={productOptions}
+                  value={productId}
+                  onChange={setProductId}
+                  placeholder="Buscar o seleccionar producto..."
+                  searchPlaceholder="Escribe el nombre o código..."
                 />
               </div>
-            )}
 
-            {/* Observación */}
-            <div className="space-y-1.5">
-              <Label>Observación</Label>
-              <Textarea
-                value={reason}
-                onChange={(e) => setReason(e.target.value)}
-                placeholder="Notas adicionales sobre esta entrada..."
-                rows={2}
-              />
-            </div>
-
-            {error && (
-              <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
-                <AlertTriangle className="h-4 w-4 flex-shrink-0" />
-                {error}
+              {/* Cantidad y Unidad */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <Label>Cantidad *</Label>
+                  <Input
+                    type="number"
+                    min="0"
+                    step={selectedProduct?.unit?.allowsDecimals ? "0.001" : "1"}
+                    value={quantity}
+                    onChange={(e) => setQuantity(e.target.value)}
+                    placeholder="0"
+                    required
+                  />
+                  {selectedProduct?.unit && (
+                    <p className="text-xs text-gray-500">
+                      {selectedProduct.unit.allowsDecimals ? `Permite decimales (${selectedProduct.unit.symbol})` : "Solo números enteros"}
+                    </p>
+                  )}
+                </div>
+                <div className="space-y-1.5">
+                  <Label>Unidad *</Label>
+                  <CustomSelect
+                    options={master.units.map((u) => ({ value: String(u.id), label: `${u.name} (${u.symbol})` }))}
+                    value={unitId}
+                    onChange={setUnitId}
+                    placeholder="Seleccionar unidad"
+                  />
+                </div>
               </div>
-            )}
 
-            <Button type="submit" disabled={submitting} className="w-full">
-              {submitting ? "Registrando..." : "Registrar entrada"}
-            </Button>
-          </CardContent>
-        </Card>
-      </form>
+              {/* Lote (conditional) */}
+              {selectedProduct?.tracksLot && (
+                <div className="space-y-1.5">
+                  <Label>Número de lote</Label>
+                  <Input
+                    value={lotNumber}
+                    onChange={(e) => setLotNumber(e.target.value)}
+                    placeholder="Ej: LOT-2026-001"
+                  />
+                </div>
+              )}
+
+              {/* Vencimiento (conditional) */}
+              {selectedProduct?.tracksExpiry && (
+                <div className="space-y-1.5">
+                  <Label className="text-red-600">Fecha de vencimiento *</Label>
+                  <Input
+                    type="date"
+                    value={expiresAt}
+                    onChange={(e) => setExpiresAt(e.target.value)}
+                    required={selectedProduct.tracksExpiry}
+                  />
+                </div>
+              )}
+
+              {/* Observación */}
+              <div className="space-y-1.5">
+                <Label>Observación</Label>
+                <Textarea
+                  value={reason}
+                  onChange={(e) => setReason(e.target.value)}
+                  placeholder="Notas adicionales sobre esta entrada..."
+                  rows={2}
+                />
+              </div>
+
+              {error && (
+                <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
+                  <AlertTriangle className="h-4 w-4 flex-shrink-0" />
+                  {error}
+                </div>
+              )}
+
+              <Button type="submit" disabled={submitting} className="w-full">
+                {submitting ? "Registrando..." : "Registrar entrada"}
+              </Button>
+            </CardContent>
+          </Card>
+        </form>
+      )}
     </div>
   );
 }

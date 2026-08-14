@@ -1,12 +1,15 @@
 "use client";
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
-import { Plus, ShoppingCart, Trash2, ArrowRight } from "lucide-react";
+import { Plus, Trash2, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { SkeletonList } from "@/components/ui/skeleton-card";
+import { SearchableSelect } from "@/components/ui/searchable-select";
+import { CustomSelect } from "@/components/ui/custom-select";
 import { cn, getStatusColor, getStatusLabel, formatDate, formatCurrency } from "@/lib/utils";
 
 type Purchase = {
@@ -26,7 +29,7 @@ type Purchase = {
 type Supplier = { id: string | number; name: string };
 type Site = { id: string | number; name: string };
 type Warehouse = { id: string | number; name: string; siteId: string | number };
-type Product = { id: string | number; code: string; name: string; unit: { id: string | number; name: string; symbol: string } | null };
+type Product = { id: string | number; code: string; name: string; unit: { id: string | number; name: string; symbol: string } | null; category?: { name: string } };
 
 export default function PurchasesPage() {
   const [purchases, setPurchases] = useState<Purchase[]>([]);
@@ -146,6 +149,13 @@ export default function PurchasesPage() {
 
   const filteredWarehouses = warehouses.filter((w) => String(w.siteId) === siteId);
 
+  const productOptions = products.map((p) => ({
+    value: String(p.id),
+    label: p.name,
+    code: p.code,
+    sublabel: p.unit?.symbol || "UND",
+  }));
+
   return (
     <div className="p-4 lg:p-6 space-y-4">
       <div className="flex items-center justify-between">
@@ -159,7 +169,7 @@ export default function PurchasesPage() {
       </div>
 
       {loading ? (
-        <div className="space-y-3">{[1, 2, 3].map((i) => <div key={i} className="h-24 bg-white rounded-xl border animate-pulse" />)}</div>
+        <SkeletonList count={3} />
       ) : purchases.length === 0 ? (
         <Card><CardContent className="py-12 text-center text-gray-400">No hay órdenes de compra registradas</CardContent></Card>
       ) : (
@@ -186,7 +196,7 @@ export default function PurchasesPage() {
                       {p.totalAmount !== null && p.totalAmount !== undefined && (
                         <p className="text-base font-bold text-gray-900">{formatCurrency(p.totalAmount, p.currency || "PEN")}</p>
                       )}
-                      <span className="text-xs text-blue-600 font-medium flex items-center gap-1">Ver detalle <ArrowRight className="h-3 w-3" /></span>
+                      <span className="text-xs text-[#1b6970] font-medium flex items-center gap-1">Ver detalle <ArrowRight className="h-3 w-3" /></span>
                     </div>
                   </div>
                 </CardContent>
@@ -206,43 +216,35 @@ export default function PurchasesPage() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-1.5">
                 <Label>Proveedor *</Label>
-                <select
-                  className="w-full h-10 rounded-lg border border-gray-300 bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                <CustomSelect
+                  options={suppliers.map((s) => ({ value: String(s.id), label: s.name }))}
                   value={supplierId}
-                  onChange={(e) => setSupplierId(e.target.value)}
-                  required
-                >
-                  <option value="">Seleccionar proveedor</option>
-                  {suppliers.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
-                </select>
+                  onChange={setSupplierId}
+                  placeholder="Seleccionar proveedor"
+                />
               </div>
 
               <div className="space-y-1.5">
                 <Label>Sede Destino *</Label>
-                <select
-                  className="w-full h-10 rounded-lg border border-gray-300 bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                <CustomSelect
+                  options={sites.map((s) => ({ value: String(s.id), label: s.name }))}
                   value={siteId}
-                  onChange={(e) => {
-                    setSiteId(e.target.value);
+                  onChange={(val) => {
+                    setSiteId(val);
                     setWarehouseId("");
                   }}
-                  required
-                >
-                  {sites.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
-                </select>
+                  placeholder="Seleccionar sede"
+                />
               </div>
 
               <div className="space-y-1.5">
                 <Label>Almacén Destino *</Label>
-                <select
-                  className="w-full h-10 rounded-lg border border-gray-300 bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                <CustomSelect
+                  options={filteredWarehouses.map((w) => ({ value: String(w.id), label: w.name }))}
                   value={warehouseId}
-                  onChange={(e) => setWarehouseId(e.target.value)}
-                  required
-                >
-                  <option value="">Seleccionar almacén</option>
-                  {filteredWarehouses.map((w) => <option key={w.id} value={w.id}>{w.name}</option>)}
-                </select>
+                  onChange={setWarehouseId}
+                  placeholder="Seleccionar almacén"
+                />
               </div>
 
               <div className="space-y-1.5">
@@ -262,17 +264,15 @@ export default function PurchasesPage() {
 
               <div className="space-y-2">
                 {items.map((item, idx) => (
-                  <div key={idx} className="flex items-center gap-2 bg-gray-50 p-2 rounded-lg border">
+                  <div key={idx} className="flex items-center gap-2 bg-gray-50 p-2.5 rounded-xl border border-gray-200">
                     <div className="flex-1">
-                      <select
-                        className="w-full h-9 rounded-md border border-gray-300 bg-white px-2 text-xs focus:outline-none focus:ring-1 focus:ring-blue-500"
+                      <SearchableSelect
+                        options={productOptions}
                         value={item.productId}
-                        onChange={(e) => handleProductChange(idx, e.target.value)}
-                        required
-                      >
-                        <option value="">Seleccionar Insumo...</option>
-                        {products.map((p) => <option key={p.id} value={p.id}>{p.code} - {p.name}</option>)}
-                      </select>
+                        onChange={(val) => handleProductChange(idx, val)}
+                        placeholder="Buscar o seleccionar insumo..."
+                        searchPlaceholder="Escribe el nombre o código..."
+                      />
                     </div>
                     <div className="w-24">
                       <Input
@@ -286,7 +286,7 @@ export default function PurchasesPage() {
                           newItems[idx].quantity = e.target.value;
                           setItems(newItems);
                         }}
-                        className="h-9 text-xs"
+                        className="h-10 text-xs"
                         required
                       />
                     </div>
@@ -302,12 +302,12 @@ export default function PurchasesPage() {
                           newItems[idx].unitPrice = e.target.value;
                           setItems(newItems);
                         }}
-                        className="h-9 text-xs"
+                        className="h-10 text-xs"
                         required
                       />
                     </div>
                     {items.length > 1 && (
-                      <Button type="button" variant="ghost" size="sm" onClick={() => handleRemoveItem(idx)} className="h-9 w-9 p-0 text-red-500 hover:text-red-700">
+                      <Button type="button" variant="ghost" size="sm" onClick={() => handleRemoveItem(idx)} className="h-10 w-10 p-0 text-red-500 hover:text-red-700">
                         <Trash2 className="h-4 w-4" />
                       </Button>
                     )}
@@ -317,7 +317,7 @@ export default function PurchasesPage() {
 
               <div className="flex justify-end pt-2">
                 <p className="text-sm font-bold text-gray-900">
-                  Total Estimado: <span className="text-blue-600">{formatCurrency(calculatedTotal, "PEN")}</span>
+                  Total Estimado: <span className="text-[#1b6970]">{formatCurrency(calculatedTotal, "PEN")}</span>
                 </p>
               </div>
             </div>

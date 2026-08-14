@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { SkeletonList } from "@/components/ui/skeleton-card";
 import { cn, formatDateTime } from "@/lib/utils";
 
 type WasteRecord = {
@@ -74,7 +75,7 @@ export default function WastePage() {
       </div>
 
       {loading ? (
-        <div className="space-y-3">{[1, 2, 3].map((i) => <div key={i} className="h-20 bg-white rounded-xl border animate-pulse" />)}</div>
+        <SkeletonList count={3} />
       ) : waste.length === 0 ? (
         <Card><CardContent className="py-12 text-center text-gray-400">No hay mermas registradas</CardContent></Card>
       ) : (

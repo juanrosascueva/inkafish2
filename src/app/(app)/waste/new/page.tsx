@@ -8,6 +8,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { SearchableSelect } from "@/components/ui/searchable-select";
+import { CustomSelect } from "@/components/ui/custom-select";
 
 const stageOptions = [
   { value: "STORAGE", label: "Almacenamiento" },
@@ -25,7 +27,7 @@ type MasterData = {
   warehouses: { id: number; name: string; siteId: number }[];
 };
 
-type Product = { id: number; name: string; code: string };
+type Product = { id: number; name: string; code: string; unit?: { name: string; symbol: string } };
 
 export default function NewWastePage() {
   const router = useRouter();
@@ -106,6 +108,13 @@ export default function NewWastePage() {
     }
   };
 
+  const productOptions = products.map((p) => ({
+    value: String(p.id),
+    label: p.name,
+    code: p.code,
+    sublabel: p.unit?.symbol || "UND",
+  }));
+
   return (
     <div className="p-4 lg:p-6 max-w-xl mx-auto space-y-6">
       <div className="flex items-center gap-3">
@@ -129,33 +138,42 @@ export default function NewWastePage() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-1.5">
                 <Label>Sede *</Label>
-                <select className="w-full h-10 rounded-lg border border-gray-300 bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" value={siteId} onChange={(e) => { setSiteId(e.target.value); setAreaId(""); setWarehouseId(""); }} required>
-                  <option value="">Seleccionar</option>
-                  {master.sites.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
-                </select>
+                <CustomSelect
+                  options={master.sites.map((s) => ({ value: String(s.id), label: s.name }))}
+                  value={siteId}
+                  onChange={(val) => { setSiteId(val); setAreaId(""); setWarehouseId(""); }}
+                  placeholder="Seleccionar sede"
+                />
               </div>
               <div className="space-y-1.5">
                 <Label>Área</Label>
-                <select className="w-full h-10 rounded-lg border border-gray-300 bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" value={areaId} onChange={(e) => setAreaId(e.target.value)}>
-                  <option value="">Sin área</option>
-                  {filteredAreas.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
-                </select>
+                <CustomSelect
+                  options={filteredAreas.map((a) => ({ value: String(a.id), label: a.name }))}
+                  value={areaId}
+                  onChange={setAreaId}
+                  placeholder="Sin área"
+                />
               </div>
             </div>
 
             <div className="space-y-1.5">
               <Label>Etapa *</Label>
-              <select className="w-full h-10 rounded-lg border border-gray-300 bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" value={stage} onChange={(e) => setStage(e.target.value)} required>
-                {stageOptions.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
-              </select>
+              <CustomSelect
+                options={stageOptions}
+                value={stage}
+                onChange={setStage}
+              />
             </div>
 
             <div className="space-y-1.5">
-              <Label>Producto *</Label>
-              <select className="w-full h-10 rounded-lg border border-gray-300 bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" value={productId} onChange={(e) => setProductId(e.target.value)} required>
-                <option value="">Seleccionar</option>
-                {products.map((p) => <option key={p.id} value={p.id}>{p.code} - {p.name}</option>)}
-              </select>
+              <Label>Producto / Insumo *</Label>
+              <SearchableSelect
+                options={productOptions}
+                value={productId}
+                onChange={setProductId}
+                placeholder="Buscar o seleccionar producto..."
+                searchPlaceholder="Escribe el nombre o código..."
+              />
             </div>
 
             <div className="grid grid-cols-2 gap-4">
@@ -165,10 +183,12 @@ export default function NewWastePage() {
               </div>
               <div className="space-y-1.5">
                 <Label>Unidad *</Label>
-                <select className="w-full h-10 rounded-lg border border-gray-300 bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" value={unitId} onChange={(e) => setUnitId(e.target.value)} required>
-                  <option value="">Seleccionar</option>
-                  {master.units.map((u) => <option key={u.id} value={u.id}>{u.name} ({u.symbol})</option>)}
-                </select>
+                <CustomSelect
+                  options={master.units.map((u) => ({ value: String(u.id), label: `${u.name} (${u.symbol})` }))}
+                  value={unitId}
+                  onChange={setUnitId}
+                  placeholder="Seleccionar unidad"
+                />
               </div>
             </div>
 

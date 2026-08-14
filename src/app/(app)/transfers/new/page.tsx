@@ -8,6 +8,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { SearchableSelect } from "@/components/ui/searchable-select";
+import { CustomSelect } from "@/components/ui/custom-select";
 
 type Site = { id: number; name: string };
 type Warehouse = { id: number; name: string; siteId: number };
@@ -106,6 +108,13 @@ export default function NewTransferPage() {
     }
   };
 
+  const productOptions = products.map((p) => ({
+    value: String(p.id),
+    label: p.name,
+    code: p.code,
+    sublabel: p.unit?.symbol || "UND",
+  }));
+
   return (
     <div className="p-4 lg:p-6 max-w-2xl mx-auto space-y-6">
       <div className="flex items-center gap-3">
@@ -123,34 +132,42 @@ export default function NewTransferPage() {
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1.5">
                 <Label>Sede Origen *</Label>
-                <select className="w-full h-10 rounded-lg border border-gray-300 bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" value={originSiteId} onChange={(e) => setOriginSiteId(e.target.value)} required>
-                  <option value="">Seleccionar</option>
-                  {sites.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
-                </select>
+                <CustomSelect
+                  options={sites.map((s) => ({ value: String(s.id), label: s.name }))}
+                  value={originSiteId}
+                  onChange={setOriginSiteId}
+                  placeholder="Seleccionar origen"
+                />
               </div>
               <div className="space-y-1.5">
                 <Label>Sede Destino *</Label>
-                <select className="w-full h-10 rounded-lg border border-gray-300 bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" value={destinationSiteId} onChange={(e) => setDestinationSiteId(e.target.value)} required>
-                  <option value="">Seleccionar</option>
-                  {sites.filter((s) => s.id !== parseInt(originSiteId)).map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
-                </select>
+                <CustomSelect
+                  options={sites.filter((s) => s.id !== parseInt(originSiteId)).map((s) => ({ value: String(s.id), label: s.name }))}
+                  value={destinationSiteId}
+                  onChange={setDestinationSiteId}
+                  placeholder="Seleccionar destino"
+                />
               </div>
               {originSiteId && (
                 <div className="space-y-1.5">
                   <Label>Almacén Origen</Label>
-                  <select className="w-full h-10 rounded-lg border border-gray-300 bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" value={originWarehouseId} onChange={(e) => setOriginWarehouseId(e.target.value)}>
-                    <option value="">Sin especificar</option>
-                    {originWarehouses.map((w) => <option key={w.id} value={w.id}>{w.name}</option>)}
-                  </select>
+                  <CustomSelect
+                    options={originWarehouses.map((w) => ({ value: String(w.id), label: w.name }))}
+                    value={originWarehouseId}
+                    onChange={setOriginWarehouseId}
+                    placeholder="Sin especificar"
+                  />
                 </div>
               )}
               {destinationSiteId && (
                 <div className="space-y-1.5">
                   <Label>Almacén Destino</Label>
-                  <select className="w-full h-10 rounded-lg border border-gray-300 bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" value={destinationWarehouseId} onChange={(e) => setDestinationWarehouseId(e.target.value)}>
-                    <option value="">Sin especificar</option>
-                    {destWarehouses.map((w) => <option key={w.id} value={w.id}>{w.name}</option>)}
-                  </select>
+                  <CustomSelect
+                    options={destWarehouses.map((w) => ({ value: String(w.id), label: w.name }))}
+                    value={destinationWarehouseId}
+                    onChange={setDestinationWarehouseId}
+                    placeholder="Sin especificar"
+                  />
                 </div>
               )}
             </div>
@@ -185,11 +202,14 @@ export default function NewTransferPage() {
                   </button>
                 </div>
                 <div className="space-y-1.5">
-                  <Label>Producto *</Label>
-                  <select className="w-full h-10 rounded-lg border border-gray-300 bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" value={item.productId} onChange={(e) => handleProductSelect(item.tempId, e.target.value)}>
-                    <option value="">Seleccionar</option>
-                    {products.map((p) => <option key={p.id} value={p.id}>{p.code} - {p.name}</option>)}
-                  </select>
+                  <Label>Producto / Insumo *</Label>
+                  <SearchableSelect
+                    options={productOptions}
+                    value={item.productId}
+                    onChange={(val) => handleProductSelect(item.tempId, val)}
+                    placeholder="Buscar o seleccionar producto..."
+                    searchPlaceholder="Escribe el nombre o código..."
+                  />
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1.5">
@@ -198,10 +218,12 @@ export default function NewTransferPage() {
                   </div>
                   <div className="space-y-1.5">
                     <Label>Unidad *</Label>
-                    <select className="w-full h-10 rounded-lg border border-gray-300 bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" value={item.unitId} onChange={(e) => updateItem(item.tempId, { unitId: e.target.value })}>
-                      <option value="">Seleccionar</option>
-                      {units.map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}
-                    </select>
+                    <CustomSelect
+                      options={units.map((u) => ({ value: String(u.id), label: `${u.name} (${u.symbol})` }))}
+                      value={item.unitId}
+                      onChange={(val) => updateItem(item.tempId, { unitId: val })}
+                      placeholder="Seleccionar unidad"
+                    />
                   </div>
                 </div>
               </div>
