@@ -1,17 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
-import { ConvexHttpClient } from "convex/browser";
+import { convexClient } from "@/lib/convex-client";
 import { createSession, verifyPassword } from "@/lib/auth";
 import { api } from "../../../../../convex/_generated/api";
 
 export async function POST(req: NextRequest) {
-  let step = "start";
-  const debugLog: any = {};
-
   try {
-    step = "parse_json";
     const body = await req.json();
     const { email, password } = body;
-    debugLog.email = email;
 
     if (!email || !password) {
       return NextResponse.json(
@@ -20,22 +15,9 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    step = "clean_url";
-    const rawUrl = process.env.NEXT_PUBLIC_CONVEX_URL;
-    const cleanUrl = (rawUrl || "https://successful-stingray-319.convex.cloud")
-      .replace(/[\r\n"'\s]/g, "")
-      .trim();
-    debugLog.rawUrl = rawUrl;
-    debugLog.cleanUrl = cleanUrl;
-
-    step = "create_client";
-    const client = new ConvexHttpClient(cleanUrl);
-
-    step = "query_user";
-    const user: any = await client.query(api.auth.getUserByEmail, {
+    const user: any = await convexClient.query(api.auth.getUserByEmail, {
       email: email.trim().toLowerCase(),
     });
-    debugLog.userFound = !!user;
 
     if (!user || !user.active) {
       return NextResponse.json(
@@ -44,7 +26,6 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    step = "verify_password";
     const valid = await verifyPassword(password, user.password);
     if (!valid) {
       return NextResponse.json(
@@ -53,10 +34,8 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    step = "create_session";
     const token = await createSession(user._id);
 
-    step = "create_response";
     const response = NextResponse.json({
       user: {
         id: user._id,
@@ -78,14 +57,9 @@ export async function POST(req: NextRequest) {
 
     return response;
   } catch (error: any) {
-    console.error("Login error at step:", step, error);
+    console.error("Login error:", error);
     return NextResponse.json(
-      {
-        error: error?.message || String(error),
-        failedAtStep: step,
-        debugLog,
-        stack: error?.stack,
-      },
+      { error: "Error interno del servidor" },
       { status: 500 }
     );
   }
