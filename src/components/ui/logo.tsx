@@ -5,12 +5,14 @@ type LogoProps = {
   variant?: "full" | "icon" | "horizontal";
   className?: string;
   lightMode?: boolean; // true if rendering on dark background (white text)
+  tagline?: string;
 };
 
 export function InkaFishLogo({
   variant = "full",
   className,
   lightMode = false,
+  tagline = "Orgullo de comer como en casa",
 }: LogoProps) {
   if (variant === "icon") {
     return (
@@ -87,12 +89,12 @@ export function InkaFishLogo({
           <circle cx="100" cy="44" r="3.5" fill="#FFFFFF" />
         </svg>
         <div className="flex flex-col">
-          <span className="font-extrabold text-lg leading-tight tracking-tight">
+          <span className="font-bold text-lg leading-tight tracking-tight">
             <span className={lightMode ? "text-white" : "text-gray-900"}>Inka </span>
             <span className={lightMode ? "text-teal-200" : "text-gray-700"}>Fish</span>
           </span>
           <span className="text-[10px] italic font-serif text-teal-400 leading-tight">
-            {"¡Aquí se come como en casa!"}
+            {tagline}
           </span>
         </div>
       </div>
@@ -133,8 +135,8 @@ export function InkaFishLogo({
         <span className={lightMode ? "text-white" : "text-gray-900"}>Inka </span>
         <span className={lightMode ? "text-teal-200" : "text-gray-700"}>Fish</span>
       </div>
-      <div className="text-xs italic font-serif text-teal-400 font-medium mt-0.5">
-        {"¡Aquí se come como en casa!"}
+      <div className={cn("text-xs italic font-serif font-medium mt-0.5", lightMode ? "text-teal-300" : "text-teal-600")}>
+        {tagline}
       </div>
     </div>
   );
