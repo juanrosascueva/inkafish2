@@ -1,12 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
+import { ConvexHttpClient } from "convex/browser";
 import { createSession, verifyPassword } from "@/lib/auth";
-import { convexClient } from "@/lib/convex-client";
 import { api } from "../../../../../convex/_generated/api";
 
 export async function POST(req: NextRequest) {
-  let convexTestRes = "";
+  let step = "start";
+  const debugLog: any = {};
+
   try {
-    const { email, password } = await req.json();
+    step = "parse_json";
+    const body = await req.json();
+    const { email, password } = body;
+    debugLog.email = email;
 
     if (!email || !password) {
       return NextResponse.json(
@@ -15,20 +20,22 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    try {
-      const testFetch = await fetch("https://successful-stingray-319.convex.cloud/api/query", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ path: "auth:getUserByEmail", args: { email: email.trim().toLowerCase() } }),
-      });
-      convexTestRes = `status=${testFetch.status}, text=${(await testFetch.text()).slice(0, 100)}`;
-    } catch (err: any) {
-      convexTestRes = `fetch err=${err?.message}`;
-    }
+    step = "clean_url";
+    const rawUrl = process.env.NEXT_PUBLIC_CONVEX_URL;
+    const cleanUrl = (rawUrl || "https://successful-stingray-319.convex.cloud")
+      .replace(/[\r\n"'\s]/g, "")
+      .trim();
+    debugLog.rawUrl = rawUrl;
+    debugLog.cleanUrl = cleanUrl;
 
-    const user: any = await convexClient.query(api.auth.getUserByEmail, {
+    step = "create_client";
+    const client = new ConvexHttpClient(cleanUrl);
+
+    step = "query_user";
+    const user: any = await client.query(api.auth.getUserByEmail, {
       email: email.trim().toLowerCase(),
     });
+    debugLog.userFound = !!user;
 
     if (!user || !user.active) {
       return NextResponse.json(
@@ -37,6 +44,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    step = "verify_password";
     const valid = await verifyPassword(password, user.password);
     if (!valid) {
       return NextResponse.json(
@@ -45,8 +53,10 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    step = "create_session";
     const token = await createSession(user._id);
 
+    step = "create_response";
     const response = NextResponse.json({
       user: {
         id: user._id,
@@ -68,12 +78,12 @@ export async function POST(req: NextRequest) {
 
     return response;
   } catch (error: any) {
-    console.error("Login error:", error);
+    console.error("Login error at step:", step, error);
     return NextResponse.json(
       {
         error: error?.message || String(error),
-        convexTestRes,
-        envUrl: process.env.NEXT_PUBLIC_CONVEX_URL,
+        failedAtStep: step,
+        debugLog,
         stack: error?.stack,
       },
       { status: 500 }
