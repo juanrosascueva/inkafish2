@@ -265,8 +265,8 @@ export default function PurchasesPage() {
 
               <div className="space-y-2">
                 {items.map((item, idx) => (
-                  <div key={idx} className="flex items-center gap-2 bg-gray-50 p-2.5 rounded-xl border border-gray-200">
-                    <div className="flex-1">
+                  <div key={idx} className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 bg-gray-50 p-2.5 rounded-xl border border-gray-200">
+                    <div className="flex-1 min-w-0">
                       <SearchableSelect
                         options={productOptions}
                         value={item.productId}
@@ -275,43 +275,45 @@ export default function PurchasesPage() {
                         searchPlaceholder="Escribe el nombre o código..."
                       />
                     </div>
-                    <div className="w-24">
-                      <Input
-                        type="number"
-                        min="0.001"
-                        step="any"
-                        placeholder="Cant."
-                        value={item.quantity}
-                        onChange={(e) => {
-                          const newItems = [...items];
-                          newItems[idx].quantity = e.target.value;
-                          setItems(newItems);
-                        }}
-                        className="h-10 text-xs"
-                        required
-                      />
+                    <div className="flex items-center gap-2 w-full sm:w-auto">
+                      <div className="flex-1 sm:w-24">
+                        <Input
+                          type="number"
+                          min="0.001"
+                          step="any"
+                          placeholder="Cant."
+                          value={item.quantity}
+                          onChange={(e) => {
+                            const newItems = [...items];
+                            newItems[idx].quantity = e.target.value;
+                            setItems(newItems);
+                          }}
+                          className="h-10 text-xs"
+                          required
+                        />
+                      </div>
+                      <div className="flex-1 sm:w-28">
+                        <Input
+                          type="number"
+                          min="0"
+                          step="any"
+                          placeholder="P. Unit (S/)"
+                          value={item.unitPrice}
+                          onChange={(e) => {
+                            const newItems = [...items];
+                            newItems[idx].unitPrice = e.target.value;
+                            setItems(newItems);
+                          }}
+                          className="h-10 text-xs"
+                          required
+                        />
+                      </div>
+                      {items.length > 1 && (
+                        <Button type="button" variant="ghost" size="sm" onClick={() => handleRemoveItem(idx)} className="h-10 w-10 p-0 text-red-500 hover:text-red-700 flex-shrink-0">
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      )}
                     </div>
-                    <div className="w-28">
-                      <Input
-                        type="number"
-                        min="0"
-                        step="any"
-                        placeholder="P. Unit (S/)"
-                        value={item.unitPrice}
-                        onChange={(e) => {
-                          const newItems = [...items];
-                          newItems[idx].unitPrice = e.target.value;
-                          setItems(newItems);
-                        }}
-                        className="h-10 text-xs"
-                        required
-                      />
-                    </div>
-                    {items.length > 1 && (
-                      <Button type="button" variant="ghost" size="sm" onClick={() => handleRemoveItem(idx)} className="h-10 w-10 p-0 text-red-500 hover:text-red-700">
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    )}
                   </div>
                 ))}
               </div>
