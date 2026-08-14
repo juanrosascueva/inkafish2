@@ -2,77 +2,102 @@ import { query, mutation } from "./_generated/server";
 import { v } from "convex/values";
 
 export const list = query({
-  args: { siteId: v.optional(v.id("sites")) },
+  args: {
+    siteId: v.optional(v.id("sites")),
+  },
   handler: async (ctx: any, args: any) => {
+    let records: any[] = [];
     if (args.siteId) {
-      return await ctx.db
+      records = await ctx.db
         .query("wasteRecords")
-        .withIndex("by_site", (q: any) => q.eq("siteId", args.siteId!))
+        .withIndex("by_site", (q: any) => q.eq("siteId", args.siteId))
         .order("desc")
         .collect();
+    } else {
+      records = await ctx.db.query("wasteRecords").order("desc").collect();
     }
-    return await ctx.db.query("wasteRecords").order("desc").collect();
+    return records;
   },
 });
 
-export const create = mutation({
+export const recordWaste = mutation({
   args: {
     productId: v.id("products"),
     unitId: v.id("units"),
     quantity: v.number(),
-    stage: v.string(), // "STORAGE", "WAREHOUSE", "PRODUCTION", "PREPARATION", "SERVICE"
+    stage: v.string(),
     cause: v.string(),
-    areaId: v.optional(v.id("areas")),
+    sourceContext: v.optional(v.string()), // "STORAGE" | "PRODUCTION_DISCARD" | "IN_TRANSIT_LOSS" | "EXPIRED"
+    productionOrderId: v.optional(v.id("productionOrders")),
+    transferId: v.optional(v.string()),
     siteId: v.id("sites"),
+    areaId: v.optional(v.id("areas")),
     warehouseId: v.optional(v.id("warehouses")),
     recordedBy: v.id("users"),
     costEstimate: v.optional(v.number()),
-    actionTaken: v.optional(v.string()),
     notes: v.optional(v.string()),
-    deductFromInventory: v.optional(v.boolean()), // Forzar descuento si se especifica
   },
   handler: async (ctx: any, args: any) => {
     const now = Date.now();
     const wasteId = await ctx.db.insert("wasteRecords", {
-      productId: args.productId,
-      unitId: args.unitId,
-      quantity: args.quantity,
-      stage: args.stage,
-      cause: args.cause,
-      areaId: args.areaId,
-      siteId: args.siteId,
-      warehouseId: args.warehouseId,
-      recordedBy: args.recordedBy,
-      costEstimate: args.costEstimate,
-      actionTaken: args.actionTaken,
-      notes: args.notes,
+      ...args,
       createdAt: now,
     });
 
-    // REGLA PRD (Sección 37 - Doble descuento):
-    // Si la merma ocurre en Almacén/Almacenamiento (STORAGE/WAREHOUSE), el insumo no ha salido de almacén,
-    // por lo que DEBE descontarse de inventoryBalances.
-    // Si la merma ocurre en Producción/Cocina/Servicio, el insumo ya fue previamente descontado
-    // de almacén (PRODUCTION_CONSUMPTION / INTERNAL_DISPATCH), por lo que se registra como MERMA ANALÍTICA
-    // y NO se vuelve a restar de inventoryBalances (evitando doble descuento).
-    const isWarehouseStage = ["STORAGE", "WAREHOUSE", "ALMACEN"].includes(args.stage.toUpperCase());
-    const shouldDeduct = args.deductFromInventory !== undefined ? args.deductFromInventory : isWarehouseStage;
+    // ⚠️ REGLA ANTI-DOBLE DESCUENTO:
+    // Si la merma proviene de una Orden de Producción (PRODUCTION_DISCARD), los insumos ya fueron
+    // descontados al cerrarse la orden. Por lo tanto, SOLO guardamos el registro de merma para estadísticas
+    // y NO aplicamos un segundo descuento de inventario.
+    const isProductionDiscard = args.sourceContext === "PRODUCTION_DISCARD";
 
-    if (shouldDeduct) {
-      // Registrar movimiento de salida por merma en almacén
-      await ctx.db.insert("inventoryMovements", {
-        movementType: "WASTE",
-        productId: args.productId,
-        quantity: args.quantity,
-        unitId: args.unitId,
-        siteId: args.siteId,
-        warehouseId: args.warehouseId,
-        createdBy: args.recordedBy,
-        reason: `Merma en etapa ${args.stage}: ${args.cause}`,
-        createdAt: now,
+    if (!isProductionDiscard) {
+      // Para mermas en Almacenamiento, Vencimiento o Pérdida en Tránsito, descontamos stock atómicamente por FEFO
+      const allLots = await ctx.db
+        .query("lots")
+        .withIndex("by_product", (q: any) => q.eq("productId", args.productId))
+        .collect();
+
+      const activeLots = allLots.filter((lot: any) => {
+        if (!lot.active || lot.remainingQuantity <= 0) return false;
+        if (args.siteId && lot.siteId && lot.siteId !== args.siteId) return false;
+        if (args.warehouseId && lot.warehouseId && lot.warehouseId !== args.warehouseId) return false;
+        return true;
       });
 
-      // Descontar del balance de almacén
+      activeLots.sort((a: any, b: any) => {
+        if (a.expiresAt && b.expiresAt) return a.expiresAt - b.expiresAt;
+        if (a.expiresAt) return -1;
+        if (b.expiresAt) return 1;
+        return a.createdAt - b.createdAt;
+      });
+
+      let remaining = args.quantity;
+      for (const lot of activeLots) {
+        if (remaining <= 0) break;
+        const take = Math.min(lot.remainingQuantity, remaining);
+        remaining -= take;
+
+        const newRemaining = lot.remainingQuantity - take;
+        await ctx.db.patch(lot._id, {
+          remainingQuantity: newRemaining,
+          active: newRemaining > 0,
+        });
+
+        await ctx.db.insert("inventoryMovements", {
+          movementType: "WASTE_ENTRY",
+          productId: args.productId,
+          quantity: take,
+          unitId: args.unitId,
+          siteId: args.siteId,
+          warehouseId: args.warehouseId || lot.warehouseId,
+          lotId: lot._id,
+          createdBy: args.recordedBy,
+          reason: `Merma (${args.stage}): ${args.cause}`,
+          createdAt: now,
+        });
+      }
+
+      // Actualizar balance acumulado
       const existingBalance = await ctx.db
         .query("inventoryBalances")
         .withIndex("by_product_site", (q: any) =>
@@ -91,4 +116,3 @@ export const create = mutation({
     return wasteId;
   },
 });
-

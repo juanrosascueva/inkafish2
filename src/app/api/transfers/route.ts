@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
+import { requireAuth } from "@/lib/auth-guard";
+import { validatePayload, transferOrderSchema } from "@/lib/validations";
 import { convexClient } from "@/lib/convex-client";
 import { api } from "../../../../convex/_generated/api";
 
@@ -13,13 +15,14 @@ export async function GET(req: NextRequest) {
       id: t._id,
       transferNumber: t.transferNumber,
       status: t.status,
-      plannedDate: t.requiredDate,
-      dispatchedAt: t.createdAt,
-      receivedAt: null,
-      notes: t.notes,
+      plannedDate: t.plannedDate,
       createdAt: t.createdAt,
+      notes: t.notes,
+      discrepancyNote: t.discrepancyNote,
       originSite: t.originSite ? { id: t.originSite._id, name: t.originSite.name } : { name: "San Miguel" },
-      destinationSite: t.destinationSite ? { id: "lince", name: t.destinationSite.name } : { name: "Lince" },
+      destinationSite: t.destinationSite ? { id: t.destinationSite._id, name: t.destinationSite.name } : { name: "Lince" },
+      requestedBy: t.requestedBy ? { id: t.requestedBy._id, name: t.requestedBy.name } : null,
+      items: t.items || [],
     }));
 
     return NextResponse.json({ transfers });
@@ -30,40 +33,85 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
+  const authResult = await requireAuth(req, ["ADMIN", "WAREHOUSE", "CHEF"]);
+  if ("response" in authResult) return authResult.response;
+
   const session = await getSession();
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   try {
     const body = await req.json();
-    const { originSiteId, destinationSiteId, items, notes } = body;
 
-    const [sites, units] = await Promise.all([
-      convexClient.query(api.master.getSites, {}),
-      convexClient.query(api.master.getUnits, {}),
-    ]);
+    const validation = validatePayload(transferOrderSchema, body);
+    if (!validation.success) return validation.response;
 
-    const defaultSiteId = (sites as any[])[0]?._id;
-    const defaultUnitId = (units as any[])[0]?._id;
+    const validatedData = validation.data;
 
-    const requestId = await convexClient.mutation(api.requests.create, {
-      siteId: (originSiteId || defaultSiteId) as any,
-      areaId: undefined as any,
+    const transferId = await convexClient.mutation(api.transfers.createTransfer, {
+      originSiteId: validatedData.originSiteId as any,
+      destinationSiteId: validatedData.destinationSiteId as any,
+      originWarehouseId: validatedData.originWarehouseId ? (validatedData.originWarehouseId as any) : undefined,
+      destinationWarehouseId: validatedData.destinationWarehouseId ? (validatedData.destinationWarehouseId as any) : undefined,
       requestedBy: session.id as any,
-      requiredDate: new Date().toISOString().split("T")[0],
-      priority: "NORMAL",
-      type: "TRANSFER",
-      outOfSchedule: false,
-      notes: notes || `Transferencia a ${destinationSiteId || "Sede Destino"}`,
-      items: (items || []).map((item: any) => ({
-        productId: item.productId as any,
-        requestedQuantity: parseFloat(item.quantity) || 1,
-        unitId: (item.unitId || defaultUnitId) as any,
+      plannedDate: validatedData.plannedDate,
+      notes: validatedData.notes,
+      items: validatedData.items.map((i) => ({
+        productId: i.productId as any,
+        unitId: i.unitId as any,
+        requestedQuantity: i.requestedQuantity,
       })),
     });
 
-    return NextResponse.json({ ok: true, id: requestId }, { status: 201 });
+    return NextResponse.json({ ok: true, id: transferId }, { status: 201 });
   } catch (error: any) {
     console.error("Error creating transfer:", error);
     return NextResponse.json({ error: error.message || "Error al registrar transferencia" }, { status: 500 });
+  }
+}
+
+export async function PATCH(req: NextRequest) {
+  const authResult = await requireAuth(req, ["ADMIN", "WAREHOUSE"]);
+  if ("response" in authResult) return authResult.response;
+
+  const session = await getSession();
+  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  try {
+    const body = await req.json();
+    const { action, transferId, receivedItems, discrepancyNote } = body;
+
+    if (!transferId || !action) {
+      return NextResponse.json({ error: "Parámetros faltantes" }, { status: 400 });
+    }
+
+    if (action === "ship") {
+      const res = await convexClient.mutation(api.transfers.shipTransfer, {
+        transferId: transferId as any,
+        shippedBy: session.id as any,
+      });
+      return NextResponse.json(res);
+    }
+
+    if (action === "receive") {
+      if (!receivedItems || !Array.isArray(receivedItems)) {
+        return NextResponse.json({ error: "Ítems recepcionados son requeridos" }, { status: 400 });
+      }
+
+      const res = await convexClient.mutation(api.transfers.receiveTransfer, {
+        transferId: transferId as any,
+        receivedBy: session.id as any,
+        receivedItems: receivedItems.map((r: any) => ({
+          itemId: r.itemId as any,
+          receivedQuantity: parseFloat(r.receivedQuantity) || 0,
+        })),
+        discrepancyNote,
+      });
+      return NextResponse.json(res);
+    }
+
+    return NextResponse.json({ error: "Acción no soportada" }, { status: 400 });
+  } catch (error: any) {
+    console.error("Error updating transfer status:", error);
+    return NextResponse.json({ error: error.message || "Error al actualizar transferencia" }, { status: 500 });
   }
 }

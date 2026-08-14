@@ -1,7 +1,7 @@
 "use client";
 import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { AlertTriangle, ArrowLeft } from "lucide-react";
+import { AlertTriangle, ArrowLeft, ShieldAlert } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,12 +14,18 @@ import { CustomDatePicker } from "@/components/ui/custom-date-picker";
 import { UserIdentityBadge, UserProfile } from "@/components/ui/user-identity-badge";
 
 const stageOptions = [
-  { value: "STORAGE", label: "Almacenamiento" },
-  { value: "PRODUCTION", label: "Producción" },
-  { value: "PREPARATION", label: "Preparación/Cocina" },
-  { value: "SERVICE", label: "Servicio" },
+  { value: "STORAGE", label: "Almacenamiento (Almacén)" },
+  { value: "PRODUCTION", label: "Producción / Cocina" },
+  { value: "PREPARATION", label: "Preparación / Mise en Place" },
+  { value: "SERVICE", label: "Servicio al Cliente" },
   { value: "RETURN", label: "Devolución" },
   { value: "OTHER", label: "Otro" },
+];
+
+const sourceContextOptions = [
+  { value: "STORAGE", label: "📦 Merma en Almacén (Descuenta Stock Físico)" },
+  { value: "PRODUCTION_DISCARD", label: "🍳 Merma en Cocina/Producción (Insumo ya consumido - Solo Trazabilidad)" },
+  { value: "EXPIRED", label: "⏳ Producto Vencido (Descuenta Stock)" },
 ];
 
 type MasterData = {
@@ -40,6 +46,7 @@ export default function NewWastePage() {
   const [unitId, setUnitId] = useState("");
   const [quantity, setQuantity] = useState("");
   const [stage, setStage] = useState("STORAGE");
+  const [sourceContext, setSourceContext] = useState("STORAGE");
   const [cause, setCause] = useState("");
   const [siteId, setSiteId] = useState("");
   const [areaId, setAreaId] = useState("");
@@ -80,14 +87,15 @@ export default function NewWastePage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          productId: parseInt(productId),
-          unitId: parseInt(unitId),
+          productId,
+          unitId,
           quantity: qty,
           stage,
+          sourceContext,
           cause,
-          areaId: areaId ? parseInt(areaId) : undefined,
-          siteId: parseInt(siteId),
-          warehouseId: warehouseId ? parseInt(warehouseId) : undefined,
+          areaId: areaId || undefined,
+          siteId,
+          warehouseId: warehouseId || undefined,
           occurredAt,
           notes: notes || undefined,
         }),
@@ -117,6 +125,8 @@ export default function NewWastePage() {
     sublabel: p.unit?.symbol || "UND",
   }));
 
+  const isProductionDiscard = sourceContext === "PRODUCTION_DISCARD";
+
   return (
     <div className="p-4 lg:p-6 max-w-xl mx-auto space-y-6">
       <div className="flex items-center gap-3">
@@ -136,7 +146,7 @@ export default function NewWastePage() {
 
       {success && (
         <div className="p-4 bg-green-50 border border-green-200 rounded-xl text-green-800 text-sm font-medium">
-          ✅ Merma registrada correctamente.
+          ✅ Merma registrada correctamente. {isProductionDiscard && "(Registrada para trazabilidad sin alterar saldo de stock en almacén)"}
         </div>
       )}
 
@@ -163,6 +173,15 @@ export default function NewWastePage() {
                   placeholder="Sin área"
                 />
               </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label>Origen / Contexto de la Merma *</Label>
+              <CustomSelect
+                options={sourceContextOptions}
+                value={sourceContext}
+                onChange={setSourceContext}
+              />
             </div>
 
             <div className="space-y-1.5">
@@ -216,12 +235,24 @@ export default function NewWastePage() {
               <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} />
             </div>
 
-            <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg">
-              <p className="text-xs text-amber-800 font-medium">⚠️ Regla anti-doble descuento</p>
-              <p className="text-xs text-amber-700 mt-1">
-                Si esta merma proviene de material ya consumido en producción, registrarla desde la orden de producción para evitar doble descuento de inventario.
-              </p>
-            </div>
+            {isProductionDiscard ? (
+              <div className="p-3 bg-teal-50 border border-teal-200 rounded-xl text-teal-800 text-xs flex items-start gap-2">
+                <ShieldAlert className="h-4 w-4 text-[#1b6970] flex-shrink-0 mt-0.5" />
+                <div>
+                  <p className="font-bold text-[#1b6970]">🛡️ Protección Anti-Doble Descuento Activa</p>
+                  <p className="mt-0.5">
+                    Al seleccionar <strong>Cocina/Producción</strong>, la merma se registrará para indicadores de control de calidad sin restar el stock de almacén nuevamente.
+                  </p>
+                </div>
+              </div>
+            ) : (
+              <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-amber-800 text-xs">
+                <p className="font-bold">⚠️ Descuento en Almacén</p>
+                <p className="mt-0.5">
+                  Esta merma restará automáticamente el saldo disponible de lotes por fecha de vencimiento (FEFO) en el almacén seleccionado.
+                </p>
+              </div>
+            )}
 
             {error && (
               <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">

@@ -294,6 +294,9 @@ export default defineSchema({
     quantity: v.number(),
     stage: v.string(),
     cause: v.string(),
+    sourceContext: v.optional(v.string()), // "STORAGE" | "PRODUCTION_DISCARD" | "IN_TRANSIT_LOSS" | "EXPIRED"
+    productionOrderId: v.optional(v.id("productionOrders")),
+    transferId: v.optional(v.string()),
     areaId: v.optional(v.id("areas")),
     siteId: v.id("sites"),
     warehouseId: v.optional(v.id("warehouses")),
@@ -303,4 +306,39 @@ export default defineSchema({
     notes: v.optional(v.string()),
     createdAt: v.number(),
   }).index("by_site", ["siteId"]),
+
+  // Transferencias entre Sedes (3 Estados: REQUESTED -> IN_TRANSIT -> RECEIVED)
+  transfers: defineTable({
+    transferNumber: v.string(),
+    originSiteId: v.id("sites"),
+    destinationSiteId: v.id("sites"),
+    originWarehouseId: v.optional(v.id("warehouses")),
+    destinationWarehouseId: v.optional(v.id("warehouses")),
+    status: v.string(), // "REQUESTED" | "IN_TRANSIT" | "RECEIVED" | "CANCELLED"
+    requestedBy: v.id("users"),
+    shippedBy: v.optional(v.id("users")),
+    receivedBy: v.optional(v.id("users")),
+    plannedDate: v.optional(v.string()),
+    shippedAt: v.optional(v.number()),
+    receivedAt: v.optional(v.number()),
+    discrepancyNote: v.optional(v.string()),
+    notes: v.optional(v.string()),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_origin_site", ["originSiteId"])
+    .index("by_destination_site", ["destinationSiteId"])
+    .index("by_status", ["status"]),
+
+  // Ítems de Transferencia
+  transferItems: defineTable({
+    transferId: v.id("transfers"),
+    productId: v.id("products"),
+    unitId: v.id("units"),
+    requestedQuantity: v.number(),
+    shippedQuantity: v.optional(v.number()),
+    receivedQuantity: v.optional(v.number()),
+    lossQuantity: v.optional(v.number()),
+    createdAt: v.number(),
+  }).index("by_transfer", ["transferId"]),
 });
