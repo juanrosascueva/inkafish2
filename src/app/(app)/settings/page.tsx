@@ -98,12 +98,13 @@ export default function SettingsPage() {
     setProductDialogOpen(true);
   };
 
-  const handleToggleProductActive = async (id: string | number) => {
+  const handleToggleProductActive = async (e: React.MouseEvent, id: string | number) => {
+    e.stopPropagation();
     try {
       const res = await fetch(`/api/products/${id}`, { method: "DELETE" });
       if (res.ok) fetchData();
-    } catch (e) {
-      console.error(e);
+    } catch (err) {
+      console.error(err);
     }
   };
 
@@ -218,13 +219,13 @@ export default function SettingsPage() {
 
         {/* PRODUCTS TAB */}
         <TabsContent value="products" className="mt-4 space-y-4">
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
               <Input placeholder="Buscar productos..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9" />
             </div>
-            <Button onClick={handleOpenCreateProduct}>
-              <Plus className="h-4 w-4" />Nuevo Producto
+            <Button onClick={handleOpenCreateProduct} className="flex-shrink-0">
+              <Plus className="h-4 w-4" /> <span className="hidden sm:inline">Nuevo Producto</span><span className="sm:hidden">Nuevo</span>
             </Button>
           </div>
 
@@ -233,35 +234,57 @@ export default function SettingsPage() {
           ) : (
             <div className="space-y-2">
               {filteredProducts.map((p) => (
-                <Card key={p.id} className={!p.active ? "opacity-60 bg-gray-50" : ""}>
+                <Card
+                  key={p.id}
+                  onClick={() => handleOpenEditProduct(p)}
+                  className={`cursor-pointer hover:border-blue-400 hover:shadow-md transition-all ${!p.active ? "opacity-60 bg-gray-50" : ""}`}
+                >
                   <CardContent className="p-3">
-                    <div className="flex items-center gap-3">
-                      <div className="w-12 h-12 rounded-lg border border-gray-100 bg-gray-50 overflow-hidden flex items-center justify-center flex-shrink-0">
-                        {p.imageUrl ? (
-                          /* eslint-disable-next-line @next/next/no-img-element */
-                          <img src={p.imageUrl} alt={p.name} className="w-full h-full object-cover" />
-                        ) : (
-                          <Package className="h-6 w-6 text-gray-300" />
-                        )}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <p className="text-sm font-medium text-gray-900 truncate">{p.name}</p>
-                          {p.tracksExpiry && <span className="text-[11px] bg-orange-100 text-orange-700 px-1.5 py-0.5 rounded font-medium">Vencimiento</span>}
-                          {p.tracksLot && <span className="text-[11px] bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded font-medium">Lote</span>}
-                          {!p.active && <span className="text-[11px] bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded font-medium">Inactivo</span>}
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className="w-12 h-12 rounded-lg border border-gray-100 bg-gray-50 overflow-hidden flex items-center justify-center flex-shrink-0">
+                          {p.imageUrl ? (
+                            /* eslint-disable-next-line @next/next/no-img-element */
+                            <img src={p.imageUrl} alt={p.name} className="w-full h-full object-cover" />
+                          ) : (
+                            <Package className="h-6 w-6 text-gray-300" />
+                          )}
                         </div>
-                        <p className="text-xs text-gray-400 truncate mt-0.5">
-                          {p.code} · {p.category?.name || "Sin categoría"} · {p.unit?.name || "Unidad"} ({p.unit?.symbol || "UND"})
-                        </p>
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <p className="text-sm font-semibold text-gray-900 truncate">{p.name}</p>
+                            {p.tracksExpiry && <span className="text-[10px] bg-orange-100 text-orange-700 px-1.5 py-0.5 rounded font-medium">Vencimiento</span>}
+                            {p.tracksLot && <span className="text-[10px] bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded font-medium">Lote</span>}
+                            {!p.active && <span className="text-[10px] bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded font-medium">Inactivo</span>}
+                          </div>
+                          <p className="text-xs text-gray-500 truncate mt-0.5">
+                            {p.code} · {p.category?.name || "Sin categoría"} · {p.unit?.name || "Unidad"} ({p.unit?.symbol || "UND"})
+                          </p>
+                        </div>
                       </div>
 
+                      {/* Action Buttons */}
                       <div className="flex items-center gap-1 flex-shrink-0">
-                        <Button variant="outline" size="sm" onClick={() => handleOpenEditProduct(p)} className="h-8 px-2 text-xs">
-                          <Edit2 className="h-3.5 w-3.5 mr-1" />Editar
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleOpenEditProduct(p);
+                          }}
+                          className="h-8 px-2 text-xs bg-white hover:bg-gray-50"
+                        >
+                          <Edit2 className="h-3.5 w-3.5 mr-1 text-gray-600" />
+                          <span className="hidden sm:inline">Editar</span>
                         </Button>
-                        <Button variant="ghost" size="sm" onClick={() => handleToggleProductActive(p.id)} title={p.active ? "Desactivar" : "Activar"} className="h-8 px-2 text-xs text-gray-500 hover:text-gray-900">
-                          <Power className={`h-3.5 w-3.5 ${p.active ? "text-red-500" : "text-green-500"}`} />
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={(e) => handleToggleProductActive(e, p.id)}
+                          title={p.active ? "Desactivar producto" : "Activar producto"}
+                          className="h-8 px-2 text-xs hover:bg-gray-100"
+                        >
+                          <Power className={`h-4 w-4 ${p.active ? "text-red-500" : "text-green-600"}`} />
                         </Button>
                       </div>
                     </div>
@@ -284,14 +307,18 @@ export default function SettingsPage() {
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
             {categories.map((c) => (
-              <Card key={c.id}>
+              <Card
+                key={c.id}
+                onClick={() => handleOpenEditCategory(c)}
+                className="cursor-pointer hover:border-blue-400 hover:shadow-md transition-all"
+              >
                 <CardContent className="p-3 flex items-center justify-between">
                   <div>
-                    <p className="font-medium text-gray-900 text-sm">{c.name}</p>
-                    <p className="text-xs text-gray-400 font-mono">{c.code}</p>
+                    <p className="font-semibold text-gray-900 text-sm">{c.name}</p>
+                    <p className="text-xs text-gray-400 font-mono">Código: {c.code}</p>
                   </div>
-                  <Button variant="ghost" size="sm" onClick={() => handleOpenEditCategory(c)} className="h-8 px-2 text-xs">
-                    <Edit2 className="h-3.5 w-3.5 text-gray-500" />
+                  <Button variant="outline" size="sm" onClick={(e) => { e.stopPropagation(); handleOpenEditCategory(c); }} className="h-8 px-2 text-xs">
+                    <Edit2 className="h-3.5 w-3.5 text-gray-600 mr-1" />Editar
                   </Button>
                 </CardContent>
               </Card>
@@ -308,16 +335,20 @@ export default function SettingsPage() {
           </div>
           <div className="space-y-2">
             {units.map((u) => (
-              <Card key={u.id}>
+              <Card
+                key={u.id}
+                onClick={() => handleOpenEditUnit(u)}
+                className="cursor-pointer hover:border-blue-400 hover:shadow-md transition-all"
+              >
                 <CardContent className="p-3 flex items-center justify-between">
                   <div>
-                    <p className="font-medium text-gray-900 text-sm">{u.name}</p>
+                    <p className="font-semibold text-gray-900 text-sm">{u.name}</p>
                     <p className="text-xs text-gray-400">
                       Símbolo: <span className="font-mono">{u.symbol}</span> · {u.allowsDecimals ? "Permite decimales" : "Solo enteros"}
                     </p>
                   </div>
-                  <Button variant="ghost" size="sm" onClick={() => handleOpenEditUnit(u)} className="h-8 px-2 text-xs">
-                    <Edit2 className="h-3.5 w-3.5 text-gray-500" />
+                  <Button variant="outline" size="sm" onClick={(e) => { e.stopPropagation(); handleOpenEditUnit(u); }} className="h-8 px-2 text-xs">
+                    <Edit2 className="h-3.5 w-3.5 text-gray-600 mr-1" />Editar
                   </Button>
                 </CardContent>
               </Card>
