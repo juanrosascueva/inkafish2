@@ -6,17 +6,17 @@ import { Card, CardContent } from "@/components/ui/card";
 import { cn, getStatusColor, getStatusLabel, formatDate } from "@/lib/utils";
 
 type Request = {
-  id: number;
+  id: string | number;
   requestNumber: string;
   status: string;
   priority: string;
   type: string;
   requiredDate: string;
-  createdAt: string;
+  createdAt: number | string;
   urgentReason: string | null;
-  site: { id: number; name: string } | null;
-  area: { id: number; name: string } | null;
-  requestedByUser: { id: number; name: string } | null;
+  site: { id: string | number; name: string } | null;
+  area: { id: string | number; name: string } | null;
+  requestedByUser: { id: string | number; name: string } | null;
 };
 
 export default function ApprovalsPage() {
@@ -64,12 +64,15 @@ export default function ApprovalsPage() {
           </div>
           <p className="text-2xl font-bold text-green-900 mt-1">
             {pending.filter((r) => {
+              if (!r.createdAt) return false;
+              const createdDate = new Date(r.createdAt).toISOString().split("T")[0];
               const today = new Date().toISOString().split("T")[0];
-              return r.createdAt?.startsWith(today);
+              return createdDate === today;
             }).length}
           </p>
         </div>
       </div>
+
 
       {/* Requests sorted by urgency */}
       {loading ? (
