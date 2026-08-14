@@ -231,6 +231,24 @@ async function seedData(ctx: any) {
     actionTaken: "Baja de inventario", notes: "Merma en almacén (descuenta stock disponible)", createdAt: now - 3600000
   });
 
+  // 15. Transferencias entre Sedes (Demostración)
+  const req4Id = await ctx.db.insert("requests", {
+    requestNumber: "REQ-000004", siteId: sanMiguelId, areaId: cocinaSmId, requestedBy: userAlmacenId,
+    requiredDate: "2026-08-15", shift: "MAÑANA", priority: "NORMAL", type: "TRANSFER", outOfSchedule: false,
+    notes: "Transferencia de reposición de abarrotes de San Miguel a Lince", status: "APPROVED", createdAt: now - 3600000, updatedAt: now - 1800000
+  });
+
+  await ctx.db.insert("requestItems", { requestId: req4Id, productId: pArrozId, requestedQuantity: 50, unitId: kgUnitId, approvedQuantity: 50, fulfilledQuantity: 50, itemStatus: "APPROVED", createdAt: now });
+  await ctx.db.insert("requestItems", { requestId: req4Id, productId: pAceiteId, requestedQuantity: 12, unitId: ltUnitId, approvedQuantity: 12, fulfilledQuantity: 12, itemStatus: "APPROVED", createdAt: now });
+
+  const req5Id = await ctx.db.insert("requests", {
+    requestNumber: "REQ-000005", siteId: linceId, areaId: cocinaLnId, requestedBy: userSolicitanteId,
+    requiredDate: "2026-08-16", shift: "NOCHE", priority: "URGENT", type: "TRANSFER", outOfSchedule: true,
+    urgentReason: "Falta de stock de proteínas en Lince para atención del fin de semana", notes: "Transferencia urgente de pollo congelado", status: "PENDING_APPROVAL", createdAt: now - 1800000, updatedAt: now - 1800000
+  });
+
+  await ctx.db.insert("requestItems", { requestId: req5Id, productId: pPolloId, requestedQuantity: 25, unitId: kgUnitId, fulfilledQuantity: 0, itemStatus: "PENDING", createdAt: now });
+
   return { status: "force_seeded_with_full_scenario" };
 }
 

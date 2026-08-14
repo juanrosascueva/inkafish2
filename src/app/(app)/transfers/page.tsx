@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Plus, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { SkeletonList } from "@/components/ui/skeleton-card";
 import { cn, getStatusColor, getStatusLabel, formatDate } from "@/lib/utils";
 
 type Transfer = {
@@ -43,7 +44,7 @@ export default function TransfersPage() {
       </div>
 
       {loading ? (
-        <div className="space-y-3">{[1, 2, 3].map((i) => <div key={i} className="h-20 bg-white rounded-xl border animate-pulse" />)}</div>
+        <SkeletonList count={3} />
       ) : transfers.length === 0 ? (
         <Card><CardContent className="py-12 text-center text-gray-400">No hay transferencias registradas</CardContent></Card>
       ) : (

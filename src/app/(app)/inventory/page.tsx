@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { cn, formatDate, formatDateTime } from "@/lib/utils";
+import { SkeletonList } from "@/components/ui/skeleton-card";
 import Link from "next/link";
 
 type Balance = {
@@ -164,9 +165,7 @@ export default function InventoryPage() {
 
         <TabsContent value="balances" className="mt-4">
           {loading ? (
-            <div className="space-y-2">
-              {[1, 2, 3, 4].map((i) => <div key={i} className="h-16 bg-white rounded-xl border animate-pulse" />)}
-            </div>
+            <SkeletonList count={4} />
           ) : filteredBalances.length === 0 ? (
             <Card><CardContent className="py-8 text-center text-gray-400 text-sm">Sin registros de inventario</CardContent></Card>
           ) : (
@@ -220,7 +219,7 @@ export default function InventoryPage() {
 
         <TabsContent value="lots" className="mt-4">
           {loading ? (
-            <div className="space-y-2">{[1, 2, 3].map((i) => <div key={i} className="h-16 bg-white rounded-xl border animate-pulse" />)}</div>
+            <SkeletonList count={4} />
           ) : filteredLots.length === 0 ? (
             <Card><CardContent className="py-8 text-center text-gray-400 text-sm">Sin lotes registrados</CardContent></Card>
           ) : (
@@ -273,7 +272,7 @@ export default function InventoryPage() {
 
         <TabsContent value="movements" className="mt-4">
           {loading ? (
-            <div className="space-y-2">{[1, 2, 3].map((i) => <div key={i} className="h-16 bg-white rounded-xl border animate-pulse" />)}</div>
+            <SkeletonList count={4} />
           ) : movements.length === 0 ? (
             <Card><CardContent className="py-8 text-center text-gray-400 text-sm">Sin movimientos de inventario</CardContent></Card>
           ) : (
