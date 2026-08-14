@@ -3,13 +3,14 @@ import { getSession } from "@/lib/auth";
 import { convexClient } from "@/lib/convex-client";
 import { api } from "../../../../../convex/_generated/api";
 
-export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const session = await getSession();
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   try {
+    const { id } = await params;
     const purchase: any = await convexClient.query(api.purchases.getById, {
-      id: params.id as any,
+      id: id as any,
     });
 
     if (!purchase) {
@@ -58,30 +59,31 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
   }
 }
 
-export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
+export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const session = await getSession();
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   try {
+    const { id } = await params;
     const body = await req.json();
     const action = body.action;
 
     if (action === "APPROVE") {
       await convexClient.mutation(api.purchases.updateStatus, {
-        id: params.id as any,
+        id: id as any,
         status: "APPROVED",
         approvedBy: session.id as any,
       });
       return NextResponse.json({ ok: true, status: "APPROVED" });
     } else if (action === "CANCEL") {
       await convexClient.mutation(api.purchases.updateStatus, {
-        id: params.id as any,
+        id: id as any,
         status: "CANCELLED",
       });
       return NextResponse.json({ ok: true, status: "CANCELLED" });
     } else if (action === "RECEIVE") {
       await convexClient.mutation(api.purchases.receivePurchase, {
-        id: params.id as any,
+        id: id as any,
         receivedBy: session.id as any,
         documentNumber: body.documentNumber,
       });

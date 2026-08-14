@@ -3,14 +3,15 @@ import { getSession } from "@/lib/auth";
 import { convexClient } from "@/lib/convex-client";
 import { api } from "../../../../../convex/_generated/api";
 
-export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
+export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const session = await getSession();
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   try {
+    const { id } = await params;
     const body = await req.json();
     await convexClient.mutation(api.products.update, {
-      id: params.id as any,
+      id: id as any,
       ...body,
       minStock: typeof body.minStock === "number" ? body.minStock : (parseFloat(body.minStock) || 0),
     });
@@ -20,13 +21,14 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   }
 }
 
-export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const session = await getSession();
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   try {
+    const { id } = await params;
     await convexClient.mutation(api.products.toggleActive, {
-      id: params.id as any,
+      id: id as any,
     });
     return NextResponse.json({ ok: true });
   } catch (error: any) {
