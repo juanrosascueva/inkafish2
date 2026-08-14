@@ -16,6 +16,7 @@ import type * as products from "../products.js";
 import type * as purchases from "../purchases.js";
 import type * as requests from "../requests.js";
 import type * as seed from "../seed.js";
+import type * as suppliers from "../suppliers.js";
 import type * as waste from "../waste.js";
 
 import type {
@@ -33,6 +34,7 @@ declare const fullApi: ApiFromModules<{
   purchases: typeof purchases;
   requests: typeof requests;
   seed: typeof seed;
+  suppliers: typeof suppliers;
   waste: typeof waste;
 }>;
 
