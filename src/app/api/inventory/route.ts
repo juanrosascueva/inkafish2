@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
+import { requireAuth } from "@/lib/auth-guard";
 import { convexClient } from "@/lib/convex-client";
 import { api } from "../../../../convex/_generated/api";
 
@@ -87,6 +88,9 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
+  const authResult = await requireAuth(req, ["ADMIN", "WAREHOUSE", "CHEF"]);
+  if ("response" in authResult) return authResult.response;
+
   const session = await getSession();
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
@@ -113,22 +117,48 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Cantidad inválida" }, { status: 400 });
     }
 
+    const isNegative = [
+      "DISCARD",
+      "CONSUMPTION",
+      "WAREHOUSE_EXIT",
+      "WASTE_ENTRY",
+      "TRANSFER_OUT",
+      "ADJUSTMENT_NEGATIVE",
+    ].includes(movementType);
+
+    if (isNegative) {
+      // Usar la Mutación Atómica FEFO
+      const result = await convexClient.mutation(api.inventory.consumeStockFEFO, {
+        productId: productId as any,
+        siteId: siteId as any,
+        warehouseId: warehouseId ? (warehouseId as any) : undefined,
+        quantityToConsume: qty,
+        unitId: unitId as any,
+        movementType,
+        createdBy: session.id as any,
+        reason: reason || undefined,
+      });
+
+      return NextResponse.json({ ok: true, result }, { status: 201 });
+    }
+
+    // Para entradas positivas de stock
     const movementId = await convexClient.mutation(api.inventory.recordMovement, {
       movementType,
-      productId,
+      productId: productId as any,
       quantity: qty,
-      unitId,
-      siteId,
-      warehouseId: warehouseId || undefined,
-      locationId: locationId || undefined,
-      lotId: lotId || undefined,
+      unitId: unitId as any,
+      siteId: siteId as any,
+      warehouseId: warehouseId ? (warehouseId as any) : undefined,
+      locationId: locationId ? (locationId as any) : undefined,
+      lotId: lotId ? (lotId as any) : undefined,
       createdBy: session.id as any,
-      reason,
+      reason: reason || undefined,
     });
 
     return NextResponse.json({ ok: true, movementId }, { status: 201 });
-  } catch (error) {
+  } catch (error: any) {
     console.error("Inventory entry error:", error);
-    return NextResponse.json({ error: "Error al registrar movimiento" }, { status: 500 });
+    return NextResponse.json({ error: error.message || "Error al registrar movimiento" }, { status: 500 });
   }
 }

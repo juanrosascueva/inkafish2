@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
+import { requireAuth } from "@/lib/auth-guard";
 import { convexClient } from "@/lib/convex-client";
 import { api } from "../../../../convex/_generated/api";
 
@@ -36,6 +37,9 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
+  const authResult = await requireAuth(req, ["ADMIN", "WAREHOUSE", "APPROVER"]);
+  if ("response" in authResult) return authResult.response;
+
   const session = await getSession();
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
