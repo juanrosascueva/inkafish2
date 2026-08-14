@@ -35,15 +35,20 @@ export const getBalances = query({
 // FEFO: Consulta de lotes ordenados por fecha de vencimiento (First Expired, First Out)
 export const getLotsByFEFO = query({
   args: {
-    productId: v.id("products"),
+    productId: v.optional(v.id("products")),
     siteId: v.optional(v.id("sites")),
     warehouseId: v.optional(v.id("warehouses")),
   },
   handler: async (ctx: any, args: any) => {
-    const allLots = await ctx.db
-      .query("lots")
-      .withIndex("by_product", (q: any) => q.eq("productId", args.productId))
-      .collect();
+    let allLots: any[] = [];
+    if (args.productId) {
+      allLots = await ctx.db
+        .query("lots")
+        .withIndex("by_product", (q: any) => q.eq("productId", args.productId!))
+        .collect();
+    } else {
+      allLots = await ctx.db.query("lots").collect();
+    }
 
     // Filtrar lotes activos con saldo disponible
     const activeLots = allLots.filter((lot: any) => {

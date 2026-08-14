@@ -11,19 +11,77 @@ export async function GET(req: NextRequest) {
   const type = searchParams.get("type"); // balances | movements | lots
 
   try {
+    const [products, sites, warehouses, units] = await Promise.all([
+      convexClient.query(api.products.list, {}),
+      convexClient.query(api.master.getSites, {}),
+      convexClient.query(api.master.getWarehouses, {}),
+      convexClient.query(api.master.getUnits, {}),
+    ]);
+
+    const prodMap = new Map((products as any[]).map((p) => [p._id, p]));
+    const siteMap = new Map((sites as any[]).map((s) => [s._id, s]));
+    const whMap = new Map((warehouses as any[]).map((w) => [w._id, w]));
+    const unitMap = new Map((units as any[]).map((u) => [u._id, u]));
+
     if (type === "movements") {
-      const movements = await convexClient.query(api.inventory.getMovements, {});
+      const rawMovements: any[] = await convexClient.query(api.inventory.getMovements, {});
+      const movements = rawMovements.map((m) => {
+        const prod = prodMap.get(m.productId);
+        const unit = unitMap.get(m.unitId) || (prod ? unitMap.get(prod.unitId) : null);
+        return {
+          id: m._id,
+          movementType: m.movementType,
+          quantity: m.quantity,
+          referenceType: m.referenceType,
+          referenceId: m.referenceId,
+          reason: m.reason,
+          createdAt: m.createdAt,
+          product: prod ? { id: prod._id, name: prod.name, code: prod.code } : null,
+          unit: unit ? { id: unit._id, symbol: unit.symbol } : null,
+          site: siteMap.get(m.siteId) ? { id: m.siteId, name: siteMap.get(m.siteId).name } : null,
+        };
+      });
       return NextResponse.json({ movements });
     }
 
     if (type === "lots") {
-      const lots = await convexClient.query(api.inventory.getLotsByFEFO, { productId: "" as any });
+      const rawLots: any[] = await convexClient.query(api.inventory.getLotsByFEFO, {});
+      const lots = rawLots.map((l) => {
+        const prod = prodMap.get(l.productId);
+        return {
+          id: l._id,
+          lotNumber: l.lotNumber,
+          receivedQuantity: l.receivedQuantity,
+          remainingQuantity: l.remainingQuantity,
+          receivedAt: l.receivedAt,
+          expiresAt: l.expiresAt,
+          active: l.active,
+          product: prod ? { id: prod._id, name: prod.name, code: prod.code } : null,
+          site: siteMap.get(l.siteId) ? { id: l.siteId, name: siteMap.get(l.siteId).name } : null,
+          warehouse: whMap.get(l.warehouseId) ? { id: l.warehouseId, name: whMap.get(l.warehouseId).name } : null,
+        };
+      });
       return NextResponse.json({ lots });
     }
 
-    const balances = await convexClient.query(api.inventory.getBalances, {});
+    const rawBalances: any[] = await convexClient.query(api.inventory.getBalances, {});
+    const balances = rawBalances.map((b) => {
+      const prod = prodMap.get(b.productId);
+      const unit = prod ? unitMap.get(prod.unitId) : null;
+      return {
+        id: b._id,
+        quantity: b.quantity,
+        updatedAt: b.updatedAt,
+        product: prod ? { id: prod._id, name: prod.name, code: prod.code, minStock: prod.minStock } : null,
+        site: siteMap.get(b.siteId) ? { id: b.siteId, name: siteMap.get(b.siteId).name } : null,
+        warehouse: whMap.get(b.warehouseId) ? { id: b.warehouseId, name: whMap.get(b.warehouseId).name } : null,
+        unit: unit ? { id: unit._id, name: unit.name, symbol: unit.symbol } : null,
+      };
+    });
+
     return NextResponse.json({ balances });
   } catch (error) {
+    console.error("Error fetching inventory data from Convex:", error);
     return NextResponse.json({ balances: [], movements: [], lots: [] });
   }
 }
@@ -74,4 +132,3 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Error al registrar movimiento" }, { status: 500 });
   }
 }
-
