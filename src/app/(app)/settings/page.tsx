@@ -4,23 +4,25 @@ import { Plus, Search, Package } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { ImageUpload } from "@/components/ui/image-upload";
 
 type Product = {
-  id: number;
+  id: string | number;
   code: string;
   name: string;
   active: boolean;
   tracksLot: boolean;
   tracksExpiry: boolean;
-  category: { id: number; name: string } | null;
-  unit: { id: number; name: string; symbol: string; allowsDecimals: boolean } | null;
+  imageUrl?: string | null;
+  category: { id: string | number; name: string } | null;
+  unit: { id: string | number; name: string; symbol: string; allowsDecimals: boolean } | null;
 };
 
-type Category = { id: number; name: string; code: string };
-type Unit = { id: number; name: string; symbol: string; allowsDecimals: boolean; active: boolean };
+type Category = { id: string | number; name: string; code: string };
+type Unit = { id: string | number; name: string; symbol: string; allowsDecimals: boolean; active: boolean };
 
 export default function SettingsPage() {
   const [products, setProducts] = useState<Product[]>([]);
@@ -31,7 +33,7 @@ export default function SettingsPage() {
   const [productDialogOpen, setProductDialogOpen] = useState(false);
   const [form, setForm] = useState({
     name: "", categoryId: "", unitId: "", presentation: "", brand: "",
-    tracksLot: false, tracksExpiry: false, allowsSubstitution: true, minStock: "", notes: ""
+    tracksLot: false, tracksExpiry: false, allowsSubstitution: true, minStock: "", notes: "", imageUrl: ""
   });
   const [submitting, setSubmitting] = useState(false);
 
@@ -64,12 +66,12 @@ export default function SettingsPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           ...form,
-          minStock: form.minStock ? parseFloat(form.minStock) : undefined,
+          minStock: form.minStock ? parseFloat(form.minStock) : 0,
         }),
       });
       if (res.ok) {
         setProductDialogOpen(false);
-        setForm({ name: "", categoryId: "", unitId: "", presentation: "", brand: "", tracksLot: false, tracksExpiry: false, allowsSubstitution: true, minStock: "", notes: "" });
+        setForm({ name: "", categoryId: "", unitId: "", presentation: "", brand: "", tracksLot: false, tracksExpiry: false, allowsSubstitution: true, minStock: "", notes: "", imageUrl: "" });
         fetchData();
       }
     } finally {
@@ -109,15 +111,25 @@ export default function SettingsPage() {
               {filteredProducts.map((p) => (
                 <Card key={p.id} className={!p.active ? "opacity-60" : ""}>
                   <CardContent className="p-3">
-                    <div className="flex items-center justify-between gap-2">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2">
-                          <p className="text-sm font-medium text-gray-900">{p.name}</p>
-                          {p.tracksExpiry && <span className="text-xs bg-orange-100 text-orange-700 px-1.5 py-0.5 rounded">Vencimiento</span>}
-                          {p.tracksLot && <span className="text-xs bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded">Lote</span>}
-                          {!p.active && <span className="text-xs bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded">Inactivo</span>}
+                    <div className="flex items-center gap-3">
+                      <div className="w-12 h-12 rounded-lg border border-gray-100 bg-gray-50 overflow-hidden flex items-center justify-center flex-shrink-0">
+                        {p.imageUrl ? (
+                          /* eslint-disable-next-line @next/next/no-img-element */
+                          <img src={p.imageUrl} alt={p.name} className="w-full h-full object-cover" />
+                        ) : (
+                          <Package className="h-6 w-6 text-gray-300" />
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <p className="text-sm font-medium text-gray-900 truncate">{p.name}</p>
+                          {p.tracksExpiry && <span className="text-[11px] bg-orange-100 text-orange-700 px-1.5 py-0.5 rounded font-medium">Vencimiento</span>}
+                          {p.tracksLot && <span className="text-[11px] bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded font-medium">Lote</span>}
+                          {!p.active && <span className="text-[11px] bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded font-medium">Inactivo</span>}
                         </div>
-                        <p className="text-xs text-gray-400">{p.code} · {p.category?.name} · {p.unit?.name} ({p.unit?.symbol})</p>
+                        <p className="text-xs text-gray-400 truncate mt-0.5">
+                          {p.code} · {p.category?.name || "Sin categoría"} · {p.unit?.name || "Unidad"} ({p.unit?.symbol || "UND"})
+                        </p>
                       </div>
                     </div>
                   </CardContent>
@@ -168,60 +180,87 @@ export default function SettingsPage() {
 
       {/* Product dialog */}
       <Dialog open={productDialogOpen} onOpenChange={setProductDialogOpen}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Nuevo Producto</DialogTitle>
           </DialogHeader>
           <form onSubmit={handleProductSubmit} className="space-y-4">
             <div className="space-y-1.5">
-              <Label>Nombre *</Label>
-              <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required />
+              <Label>Fotografía del producto (Cloudinary)</Label>
+              <ImageUpload
+                value={form.imageUrl}
+                onChange={(url) => setForm({ ...form, imageUrl: url })}
+                disabled={submitting}
+              />
             </div>
+
+            <div className="space-y-1.5">
+              <Label>Nombre del Producto *</Label>
+              <Input
+                value={form.name}
+                onChange={(e) => setForm({ ...form, name: e.target.value })}
+                placeholder="Ej: Lomo Fino de Res"
+                required
+              />
+            </div>
+
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1.5">
                 <Label>Categoría *</Label>
-                <select className="w-full h-10 rounded-lg border border-gray-300 bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" value={form.categoryId} onChange={(e) => setForm({ ...form, categoryId: e.target.value })} required>
+                <select
+                  className="w-full h-10 rounded-lg border border-gray-300 bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  value={form.categoryId}
+                  onChange={(e) => setForm({ ...form, categoryId: e.target.value })}
+                  required
+                >
                   <option value="">Seleccionar</option>
                   {categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
                 </select>
               </div>
               <div className="space-y-1.5">
                 <Label>Unidad *</Label>
-                <select className="w-full h-10 rounded-lg border border-gray-300 bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" value={form.unitId} onChange={(e) => setForm({ ...form, unitId: e.target.value })} required>
+                <select
+                  className="w-full h-10 rounded-lg border border-gray-300 bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  value={form.unitId}
+                  onChange={(e) => setForm({ ...form, unitId: e.target.value })}
+                  required
+                >
                   <option value="">Seleccionar</option>
                   {units.map((u) => <option key={u.id} value={u.id}>{u.name} ({u.symbol})</option>)}
                 </select>
               </div>
               <div className="space-y-1.5">
                 <Label>Presentación</Label>
-                <Input value={form.presentation} onChange={(e) => setForm({ ...form, presentation: e.target.value })} placeholder="Ej: 1 kg" />
+                <Input value={form.presentation} onChange={(e) => setForm({ ...form, presentation: e.target.value })} placeholder="Ej: 1 kg / Caja 12u" />
               </div>
               <div className="space-y-1.5">
                 <Label>Marca</Label>
-                <Input value={form.brand} onChange={(e) => setForm({ ...form, brand: e.target.value })} />
+                <Input value={form.brand} onChange={(e) => setForm({ ...form, brand: e.target.value })} placeholder="Ej: San Fernando" />
               </div>
-              <div className="space-y-1.5">
+              <div className="space-y-1.5 col-span-2 sm:col-span-1">
                 <Label>Stock mínimo</Label>
                 <Input type="number" min="0" step="any" value={form.minStock} onChange={(e) => setForm({ ...form, minStock: e.target.value })} placeholder="0" />
               </div>
             </div>
-            <div className="flex flex-wrap gap-4">
-              <label className="flex items-center gap-2 text-sm">
+
+            <div className="flex flex-wrap gap-4 pt-2">
+              <label className="flex items-center gap-2 text-sm cursor-pointer">
                 <input type="checkbox" checked={form.tracksLot} onChange={(e) => setForm({ ...form, tracksLot: e.target.checked })} className="rounded" />
                 Maneja lote
               </label>
-              <label className="flex items-center gap-2 text-sm">
+              <label className="flex items-center gap-2 text-sm cursor-pointer">
                 <input type="checkbox" checked={form.tracksExpiry} onChange={(e) => setForm({ ...form, tracksExpiry: e.target.checked })} className="rounded" />
                 Maneja vencimiento
               </label>
-              <label className="flex items-center gap-2 text-sm">
+              <label className="flex items-center gap-2 text-sm cursor-pointer">
                 <input type="checkbox" checked={form.allowsSubstitution} onChange={(e) => setForm({ ...form, allowsSubstitution: e.target.checked })} className="rounded" />
                 Permite sustitución
               </label>
             </div>
-            <DialogFooter>
+
+            <DialogFooter className="pt-2">
               <Button type="button" variant="outline" onClick={() => setProductDialogOpen(false)}>Cancelar</Button>
-              <Button type="submit" disabled={submitting}>{submitting ? "Guardando..." : "Guardar"}</Button>
+              <Button type="submit" disabled={submitting}>{submitting ? "Guardando..." : "Guardar Producto"}</Button>
             </DialogFooter>
           </form>
         </DialogContent>

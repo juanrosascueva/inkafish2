@@ -27,6 +27,7 @@ export async function GET(req: NextRequest) {
       minStock: p.minStock,
       active: p.active,
       notes: p.notes,
+      imageUrl: p.imageUrl || null,
       category: catMap.get(p.categoryId) ? { id: p.categoryId, name: catMap.get(p.categoryId).name } : null,
       unit: unitMap.get(p.unitId) ? { id: p.unitId, name: unitMap.get(p.unitId).name, symbol: unitMap.get(p.unitId).symbol, allowsDecimals: unitMap.get(p.unitId).allowsDecimals } : null,
     }));
@@ -44,9 +45,17 @@ export async function POST(req: NextRequest) {
 
   try {
     const body = await req.json();
-    const productId = await convexClient.mutation(api.products.create, body);
+    const code = body.code || `P-${Math.floor(100000 + Math.random() * 900000)}`;
+
+    const productId = await convexClient.mutation(api.products.create, {
+      ...body,
+      code,
+      minStock: typeof body.minStock === "number" ? body.minStock : (parseFloat(body.minStock) || 0),
+    });
     return NextResponse.json({ ok: true, id: productId }, { status: 201 });
-  } catch (error) {
-    return NextResponse.json({ error: "Error al crear producto" }, { status: 500 });
+  } catch (error: any) {
+    console.error("Error creating product:", error);
+    return NextResponse.json({ error: error.message || "Error al crear producto" }, { status: 500 });
   }
 }
+
